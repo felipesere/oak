@@ -82,6 +82,14 @@ mod tests {
 
     const RAW_DITTO: &'static str = include_str!("../examples/ditto.json");
 
+    async fn setup() -> (PokeClient, MockServer) {
+        let poke_server = MockServer::start().await;
+        let client = PokeClient::new(format!("http://{}", poke_server.address()));
+
+        (client, poke_server)
+    }
+
+
     #[test]
     fn deserializes_ditto() {
         let ditto =
@@ -99,14 +107,13 @@ mod tests {
 
     #[tokio::test]
     async fn retrieves_ditto_from_pokeapi() {
-        let mock_server = MockServer::start().await;
+        let (client, mock_server) = setup().await;
+
         Mock::given(method("GET"))
             .and(path("/api/v2/pokemon-species/ditto"))
             .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_DITTO, "application/json"))
             .mount(&mock_server)
             .await;
-
-        let client = PokeClient::new(format!("http://{}", mock_server.address()));
 
         let diglett = client.find("ditto").await.expect("Failed to get diglett");
 
@@ -117,13 +124,12 @@ mod tests {
 
     #[tokio::test]
     async fn error_when_pokemon_isnt_real() {
-        let mock_server = MockServer::start().await;
+        let (client, mock_server) = setup().await;
+
         Mock::given(any())
             .respond_with(ResponseTemplate::new(404).set_body_string("Not Found"))
             .mount(&mock_server)
             .await;
-
-        let client = PokeClient::new(format!("http://{}", mock_server.address()));
 
         let err = client.find("not-a-pokemon").await.expect_err("should have failed to find 'not-a-pokemon'");
 
