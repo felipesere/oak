@@ -9,7 +9,7 @@ struct Habitat {
 
 #[derive(Deserialize)]
 struct Language {
-    name: String
+    name: String,
 }
 
 #[derive(Deserialize)]
@@ -26,7 +26,17 @@ struct Pokemon {
     flavor_text_entries: Vec<FlavorText>,
 }
 
+#[derive(Debug)]
 struct PokeClient {
+    client: reqwest::Client,
+    domain: String,
+}
+
+impl PokeClient {
+    fn new(domain: String) -> PokeClient {
+        let client = reqwest::Client::new();
+        PokeClient { client, domain }
+    }
 }
 
 #[derive(Error, Debug)]
@@ -34,7 +44,10 @@ enum Error {}
 
 impl PokeClient {
     async fn find(&self, name: &str) -> Result<Pokemon, Error> {
-        let pokemon = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon-species/{}", name))
+        let pokemon = self
+            .client
+            .get(format!("{}/api/v2/pokemon-species/{}", self.domain, name))
+            .send()
             .await
             .expect("Failed to make request to PokeApi")
             .json::<Pokemon>()
@@ -47,14 +60,19 @@ impl PokeClient {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
     use super::*;
+    use pretty_assertions::assert_eq;
+    use wiremock::{
+        matchers::{method, path},
+        Mock, MockServer, ResponseTemplate,
+    };
+
+    const RAW_DITTO: &'static str = include_str!("../examples/ditto.json");
 
     #[test]
     fn deserializes_ditto() {
-        let raw_ditto = include_str!("../examples/ditto.json");
-
-        let ditto = serde_json::from_str::<Pokemon>(raw_ditto).expect("unable to deserialize ditto");
+        let ditto =
+            serde_json::from_str::<Pokemon>(RAW_DITTO).expect("unable to deserialize ditto");
 
         assert_eq!(ditto.name, "ditto".to_string());
         assert!(!ditto.is_legendary);
@@ -67,13 +85,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn retrieves_diglett_from_pokeapi() {
-        let client = PokeClient{};
+    async fn retrieves_ditto_from_pokeapi() {
+        let mock_server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/api/v2/pokemon-species/ditto"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_DITTO, "application/json"))
+            .mount(&mock_server)
+            .await;
 
-        let diglett = client.find("diglett").await.expect("Failed to get diglett");
+        let client = PokeClient::new(format!("http://{}", mock_server.address()));
 
-        assert_eq!(diglett.name, "diglett".to_string());
-        assert_eq!(diglett.habitat.name, "cave".to_string());
+        let diglett = client.find("ditto").await.expect("Failed to get diglett");
+
+        assert_eq!(diglett.name, "ditto".to_string());
+        assert_eq!(diglett.habitat.name, "urban".to_string());
         assert!(!diglett.is_legendary);
     }
 }
