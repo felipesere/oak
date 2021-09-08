@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use thiserror::Error;
 // TODO: Consider a custom deserializer and custom types
 
 #[derive(Deserialize)]
@@ -25,6 +26,25 @@ struct Pokemon {
     flavor_text_entries: Vec<FlavorText>,
 }
 
+struct PokeClient {
+}
+
+#[derive(Error, Debug)]
+enum Error {}
+
+impl PokeClient {
+    async fn find(&self, name: &str) -> Result<Pokemon, Error> {
+        let pokemon = reqwest::get(format!("https://pokeapi.co/api/v2/pokemon-species/{}", name))
+            .await
+            .expect("Failed to make request to PokeApi")
+            .json::<Pokemon>()
+            .await
+            .expect("Failed to parse response as a Pokemon");
+
+        Ok(pokemon)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
@@ -44,5 +64,16 @@ mod tests {
         let first_flavour_text = &ditto.flavor_text_entries[0];
         assert_eq!(first_flavour_text.flavor_text, "It can freely recombine its own cellular structure to\ntransform into other life-forms.".to_string());
         assert_eq!(first_flavour_text.language.name, "en".to_string());
+    }
+
+    #[tokio::test]
+    async fn retrieves_diglett_from_pokeapi() {
+        let client = PokeClient{};
+
+        let diglett = client.find("diglett").await.expect("Failed to get diglett");
+
+        assert_eq!(diglett.name, "diglett".to_string());
+        assert_eq!(diglett.habitat.name, "cave".to_string());
+        assert!(!diglett.is_legendary);
     }
 }
