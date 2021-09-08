@@ -115,11 +115,11 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let diglett = client.find("ditto").await.expect("Failed to get diglett");
+        let ditto = client.find("ditto").await.expect("Failed to get ditto");
 
-        assert_eq!(diglett.name, "ditto".to_string());
-        assert_eq!(diglett.habitat.name, "urban".to_string());
-        assert!(!diglett.is_legendary);
+        assert_eq!(ditto.name, "ditto".to_string());
+        assert_eq!(ditto.habitat.name, "urban".to_string());
+        assert!(!ditto.is_legendary);
     }
 
     #[tokio::test]
