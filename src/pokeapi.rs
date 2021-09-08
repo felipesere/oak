@@ -1,24 +1,25 @@
 use serde::Deserialize;
+use reqwest::{Client, StatusCode};
 use thiserror::Error;
 // TODO: Consider a custom deserializer and custom types
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Habitat {
     name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Language {
     name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct FlavorText {
     flavor_text: String,
     language: Language,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Pokemon {
     name: String,
     is_legendary: bool,
@@ -28,28 +29,39 @@ struct Pokemon {
 
 #[derive(Debug)]
 struct PokeClient {
-    client: reqwest::Client,
+    client: Client,
     domain: String,
 }
 
 impl PokeClient {
     fn new(domain: String) -> PokeClient {
-        let client = reqwest::Client::new();
+        let client = Client::new();
         PokeClient { client, domain }
     }
 }
 
 #[derive(Error, Debug)]
-enum Error {}
+enum Error {
+    #[error("Did not find '{}'", .0)]
+    NoSuchPokemon(String),
+    #[error("Failed to establish connection")]
+    ConnectionError(#[from] reqwest::Error),
+}
 
 impl PokeClient {
     async fn find(&self, name: &str) -> Result<Pokemon, Error> {
-        let pokemon = self
+        let pokemon =  self
             .client
             .get(format!("{}/api/v2/pokemon-species/{}", self.domain, name))
             .send()
-            .await
-            .expect("Failed to make request to PokeApi")
+            .await?
+            .error_for_status()
+            .map_err(|e| {
+                match e.status() {
+                    Some(StatusCode::NOT_FOUND) => Error::NoSuchPokemon(name.to_string()),
+                    _ => Error::ConnectionError(e),
+                }
+            })?
             .json::<Pokemon>()
             .await
             .expect("Failed to parse response as a Pokemon");
@@ -61,9 +73,10 @@ impl PokeClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use pretty_assertions::assert_eq;
     use wiremock::{
-        matchers::{method, path},
+        matchers::{method, path, any},
         Mock, MockServer, ResponseTemplate,
     };
 
@@ -100,5 +113,20 @@ mod tests {
         assert_eq!(diglett.name, "ditto".to_string());
         assert_eq!(diglett.habitat.name, "urban".to_string());
         assert!(!diglett.is_legendary);
+    }
+
+    #[tokio::test]
+    async fn error_when_pokemon_isnt_real() {
+        let mock_server = MockServer::start().await;
+        Mock::given(any())
+            .respond_with(ResponseTemplate::new(404).set_body_string("Not Found"))
+            .mount(&mock_server)
+            .await;
+
+        let client = PokeClient::new(format!("http://{}", mock_server.address()));
+
+        let err = client.find("not-a-pokemon").await.expect_err("should have failed to find 'not-a-pokemon'");
+
+        assert_matches!(err, Error::NoSuchPokemon(_));
     }
 }
