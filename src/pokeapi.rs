@@ -1,6 +1,8 @@
-use serde::Deserialize;
 use reqwest::{Client, StatusCode};
+use serde::Deserialize;
+use std::time::Duration;
 use thiserror::Error;
+
 // TODO: Consider a custom deserializer and custom types
 
 #[derive(Deserialize, Debug)]
@@ -34,39 +36,47 @@ struct PokeClient {
 }
 
 impl PokeClient {
-    fn new(domain: String) -> PokeClient {
-        let client = Client::new();
+    fn new(domain: String, timeout: Duration) -> PokeClient {
+        let client = Client::builder()
+            .timeout(timeout)
+            .build()
+            .expect("failed to construct a viable PokeApi client");
         PokeClient { client, domain }
     }
 }
 
 #[derive(Error, Debug)]
 enum Error {
-    #[error("Did not find '{}'", .0)]
-    NoSuchPokemon(String),
+    #[error("Did not find '{}'", .pokemon)]
+    NoSuchPokemon { pokemon: String },
+    #[error("Received bad JSON from the server")]
+    BadJson,
     #[error("Failed to establish connection")]
-    ConnectionError(#[from] reqwest::Error),
+    Other(#[from] reqwest::Error),
 }
 
 impl PokeClient {
     async fn find(&self, name: &str) -> Result<Pokemon, Error> {
-        let pokemon =  self
-            .client
+        self.client
             .get(format!("{}/api/v2/pokemon-species/{}", self.domain, name))
             .send()
             .await?
             .error_for_status()
-            .map_err(|e| {
-                match e.status() {
-                    Some(StatusCode::NOT_FOUND) => Error::NoSuchPokemon(name.to_string()),
-                    _ => Error::ConnectionError(e),
-                }
+            .map_err(|e| match e.status() {
+                Some(StatusCode::NOT_FOUND) => Error::NoSuchPokemon {
+                    pokemon: name.to_string(),
+                },
+                _ => Error::Other(e),
             })?
             .json::<Pokemon>()
             .await
-            .expect("Failed to parse response as a Pokemon");
-
-        Ok(pokemon)
+            .map_err(|e| {
+                if e.is_decode() {
+                    Error::BadJson
+                } else {
+                    Error::Other(e)
+                }
+            })
     }
 }
 
@@ -75,20 +85,24 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
     use pretty_assertions::assert_eq;
+    use std::time::Duration;
     use wiremock::{
-        matchers::{method, path, any},
+        matchers::{any, method, path},
         Mock, MockServer, ResponseTemplate,
     };
 
     const RAW_DITTO: &'static str = include_str!("../examples/ditto.json");
+    const CONNECTION_TIMEOUT: Duration = Duration::from_millis(100);
 
     async fn setup() -> (PokeClient, MockServer) {
         let poke_server = MockServer::start().await;
-        let client = PokeClient::new(format!("http://{}", poke_server.address()));
+        let client = PokeClient::new(
+            format!("http://{}", poke_server.address()),
+            CONNECTION_TIMEOUT,
+        );
 
         (client, poke_server)
     }
-
 
     #[test]
     fn deserializes_ditto() {
@@ -131,8 +145,53 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        let err = client.find("not-a-pokemon").await.expect_err("should have failed to find 'not-a-pokemon'");
+        let err = client
+            .find("not-a-pokemon")
+            .await
+            .expect_err("should have failed to find 'not-a-pokemon'");
 
-        assert_matches!(err, Error::NoSuchPokemon(_));
+        assert_matches!(err, Error::NoSuchPokemon { .. });
+    }
+
+    #[tokio::test]
+    async fn error_when_retrieving_ditto_takes_too_long() {
+        let (client, mock_server) = setup().await;
+
+        Mock::given(method("GET"))
+            .and(path("/api/v2/pokemon-species/ditto"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_raw(RAW_DITTO, "application/json")
+                    .set_delay(CONNECTION_TIMEOUT * 2),
+            )
+            .mount(&mock_server)
+            .await;
+
+        let err = client
+            .find("ditto")
+            .await
+            .expect_err("should have failed with a timeout");
+
+        assert_matches!(err, Error::Other(_));
+    }
+
+    #[tokio::test]
+    async fn response_for_ditto_is_missing_some_values() {
+        let (client, mock_server) = setup().await;
+
+        Mock::given(method("GET"))
+            .and(path("/api/v2/pokemon-species/ditto"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_raw(r#"{"name": "ditto"}"#, "application/json"),
+            )
+            .mount(&mock_server)
+            .await;
+
+        let err = client
+            .find("ditto")
+            .await
+            .expect_err("should have failed due to bad json");
+
+        assert_matches!(err, Error::BadJson { .. })
     }
 }
