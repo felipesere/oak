@@ -5,7 +5,10 @@ use serde::Serialize;
 mod pokeapi;
 
 #[rocket::get("/pokemon/<name>")]
-async fn find_pokemon(_poke_api: &State<PokeClient>, name: &str) -> Json<PokemonResponse> {
+async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> Json<PokemonResponse> {
+    // TODO: Use this when we have the Pokemon transformation settled
+    let _ = poke_api.find(name).await;
+
     Json(PokemonResponse {
         name: name.into(),
         description: "It was created by scientists after years...".into(),
@@ -57,23 +60,45 @@ mod test {
     use super::*;
     use assert_json_diff::assert_json_eq;
     use rocket::http::Status;
+    use rocket::local::asynchronous::Client;
+    use wiremock::{
+        matchers::{any, method, path},
+        Mock, MockServer, ResponseTemplate,
+    };
 
-    #[test]
-    fn sketch_of_how_to_use_rocket_testing_facilities() {
-        use rocket::local::blocking::Client;
+    const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
 
-        // TODO: Use Wiremock like in pokeapi.rs once we test the endpoint in earnest.
-        let live_settings = Settings {
+    async fn setup() -> (Settings, MockServer) {
+        let poke_server = MockServer::start().await;
+
+        let settings = Settings {
             poke_api: PokeApiSettings {
-                base_url: "https://pokeapi.co".to_string(),
-                timeout: std::time::Duration::from_secs(10),
+                base_url: format!("http://{}", poke_server.address().to_string()),
+                timeout: std::time::Duration::from_secs(3),
             },
         };
 
-        let client = Client::tracked(rocket(live_settings)).unwrap();
-        let response = client.get("/pokemon/mewtwo").dispatch();
+        (settings, poke_server)
+    }
+
+    #[tokio::test]
+    async fn requesting_mewtwo_makes_a_call_to_the_pokemon_api() {
+        let (settings, mock_poke_api) = setup().await;
+
+        Mock::given(method("GET"))
+            .and(path("/api/v2/pokemon-species/mewtwo"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_MEWTWO, "application/json"))
+            .expect(1)
+            .mount(&mock_poke_api)
+            .await;
+
+        let client = Client::tracked(rocket(settings)).await.unwrap();
+        let response = client.get("/pokemon/mewtwo").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        let mewtwo_json = response.into_string().expect("Unexpected empty response");
+        let mewtwo_json = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
         assert_json_eq!(
             json(&mewtwo_json),
             json(

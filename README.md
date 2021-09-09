@@ -20,11 +20,14 @@ as they come up.
   * [ ] use reqwest to fire off any requests
 
 * [ ] Server
-  * [ ] Sketch out a basic server with a single endpoint that retrieves the Pokemon from the live PokeApi
+  * [x] Sketch out a basic server with a single endpoint that retrieves the Pokemon from the live PokeApi
       * [x] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
       * [x] Write a type that serializes to the desiered JSON format
-      * [ ] Use new type in hardcoded response
-  * [ ] Server settings for port
+      * [x] Use new type in hardcoded response
+  * [ ] Server settings
+    * [x] Sketch out a type
+    * [ ] Read up on figmet to support multiple types of configurations, but at least ENV vars (e.g. port!) and YAML
+    * [ ] Server settings for port
 
 * [x] Setup CI with Github Actions (is this still free?) or CircleCI
 * [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
