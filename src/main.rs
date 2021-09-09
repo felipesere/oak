@@ -1,6 +1,4 @@
-use rocket::{
-    Rocket, Build
-};
+use rocket::{Build, Rocket};
 
 mod pokeapi;
 
