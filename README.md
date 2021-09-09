@@ -6,7 +6,7 @@ A fun Pokédex that combines timeless brands PokéMon and StarWars with a classi
 
 * [ ] Build a client for the Pokemon API
   * [x] Serialize Pokemon JSON to a "PokemonAPI struct"
-  * [ ] Create a struct that represents `PokemonSettings` that produces a `PokemonClient`
+  * [x] Create a struct that represents `PokemonSettings` that produces a `PokemonClient`
   * [x] use reqwest to fire off any requests
     * [x] Use Wiremock for local testing
 

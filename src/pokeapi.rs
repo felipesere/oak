@@ -29,6 +29,19 @@ struct Pokemon {
     flavor_text_entries: Vec<FlavorText>,
 }
 
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+struct PokeApiSettings {
+    domain: String,
+    #[serde(with = "humantime_serde")]
+    timeout: Duration,
+}
+
+impl From<PokeApiSettings> for PokeClient {
+    fn from(settings: PokeApiSettings) -> Self {
+        PokeClient::new(settings.domain, settings.timeout)
+    }
+}
+
 #[derive(Debug)]
 struct PokeClient {
     client: Client,
@@ -193,5 +206,24 @@ mod tests {
             .expect_err("should have failed due to bad json");
 
         assert_matches!(err, Error::BadJson { .. })
+    }
+
+    #[test]
+    fn reads_configuration() {
+        let pokeapi_yaml = r#"
+            domain: somewhere.com
+            timeout: 15s
+        "#;
+
+        let pokeapi_settings = serde_yaml::from_str::<PokeApiSettings>(pokeapi_yaml)
+            .expect("should have parsed PokeApi config YAML");
+
+        assert_eq!(
+            pokeapi_settings,
+            PokeApiSettings {
+                domain: "somewhere.com".into(),
+                timeout: Duration::from_secs(15),
+            }
+        );
     }
 }
