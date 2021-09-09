@@ -23,7 +23,7 @@ struct FlavorText {
 }
 
 #[derive(Deserialize, Debug)]
-struct Pokemon {
+pub(crate) struct Pokemon {
     name: String,
     is_legendary: bool,
     habitat: Habitat,
@@ -31,10 +31,10 @@ struct Pokemon {
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
-struct PokeApiSettings {
-    base_url: String,
+pub(crate) struct PokeApiSettings {
+    pub(crate) base_url: String,
     #[serde(with = "humantime_serde")]
-    timeout: Duration,
+    pub(crate) timeout: Duration,
 }
 
 impl From<PokeApiSettings> for PokeClient {
@@ -44,24 +44,14 @@ impl From<PokeApiSettings> for PokeClient {
 }
 
 #[derive(Debug)]
-struct PokeClient {
+pub(crate) struct PokeClient {
     client: Client,
     domain: String,
 }
 
-impl PokeClient {
-    fn new(domain: String, timeout: Duration) -> PokeClient {
-        let client = Client::builder()
-            .timeout(timeout)
-            .build()
-            .expect("failed to construct a viable PokeApi client");
-        PokeClient { client, domain }
-    }
-}
-
 #[allow(dead_code)]
 #[derive(Error, Debug)]
-enum Error {
+pub(crate) enum Error {
     #[error("Did not find '{}'", .pokemon)]
     NoSuchPokemon { pokemon: String },
     #[error("Received bad JSON from the server")]
@@ -70,9 +60,17 @@ enum Error {
     Other(#[from] reqwest::Error),
 }
 
-#[allow(dead_code)]
 impl PokeClient {
-    async fn find(&self, name: &str) -> Result<Pokemon, Error> {
+    pub(crate) fn new(domain: String, timeout: Duration) -> PokeClient {
+        let client = Client::builder()
+            .timeout(timeout)
+            .build()
+            .expect("failed to construct a viable PokeApi client");
+        PokeClient { client, domain }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn find(&self, name: &str) -> Result<Pokemon, Error> {
         self.client
             .get(format!("{}/api/v2/pokemon-species/{}", self.domain, name))
             .send()

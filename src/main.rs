@@ -1,10 +1,11 @@
-use rocket::{serde::json::Json, Build, Rocket};
+use pokeapi::{PokeApiSettings, PokeClient};
+use rocket::{serde::json::Json, Build, Rocket, State};
 use serde::Serialize;
 
 mod pokeapi;
 
 #[rocket::get("/pokemon/<name>")]
-async fn find_pokemon(name: &str) -> Json<PokemonResponse> {
+async fn find_pokemon(_poke_api: &State<PokeClient>, name: &str) -> Json<PokemonResponse> {
     Json(PokemonResponse {
         name: name.into(),
         description: "It was created by scientists after years...".into(),
@@ -15,7 +16,16 @@ async fn find_pokemon(name: &str) -> Json<PokemonResponse> {
 
 #[rocket::launch]
 fn rocket() -> Rocket<Build> {
-    rocket::build().mount("/", rocket::routes![find_pokemon])
+    // TODO: This is a placeholder until configuration is sorted
+    let poke_api_client: PokeClient = PokeApiSettings {
+        base_url: "https://pokeapi.co".to_string(),
+        timeout: std::time::Duration::from_secs(10),
+    }
+    .into();
+
+    rocket::build()
+        .manage(poke_api_client)
+        .mount("/", rocket::routes![find_pokemon])
 }
 
 #[derive(Serialize)]
