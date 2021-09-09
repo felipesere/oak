@@ -1,11 +1,16 @@
-use rocket::{Build, Rocket};
+use rocket::{serde::json::Json, Build, Rocket};
 use serde::Serialize;
 
 mod pokeapi;
 
 #[rocket::get("/pokemon/<name>")]
-async fn find_pokemon(name: &str) -> String {
-    format!("Hello, {}!", name)
+async fn find_pokemon(name: &str) -> Json<PokemonResponse> {
+    Json(PokemonResponse {
+        name: name.into(),
+        description: "It was created by scientists after years...".into(),
+        habitat: "rare".into(),
+        is_legendary: true,
+    })
 }
 
 #[rocket::launch]
@@ -35,7 +40,20 @@ mod test {
         let client = Client::tracked(rocket()).unwrap();
         let response = client.get("/pokemon/mewtwo").dispatch();
         assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string(), Some("Hello, mewtwo!".into()));
+        let mewtwo_json = response.into_string().expect("Unexpected empty response");
+        assert_json_eq!(
+            json(&mewtwo_json),
+            json(
+                r#"
+                {
+                    "name": "mewtwo",
+                    "description": "It was created by scientists after years...",
+                    "habitat":"rare",
+                    "isLegendary":true
+                }
+                "#
+            )
+        );
     }
 
     #[test]
@@ -47,13 +65,20 @@ mod test {
             is_legendary: true,
         };
 
-        let mewtwo_json =
+        let actual_json =
             serde_json::to_string(&mewtwo).expect("unable to serialize MewTwo to JSON");
 
         assert_json_eq!(
-            json(&mewtwo_json),
+            json(&actual_json),
             json(
-                r#"{"name":"mewtwo","description":"It was created by scientists after years...","habitat":"rare","isLegendary":true}"#
+                r#"
+                {
+                    "name": "mewtwo",
+                    "description": "It was created by scientists after years...",
+                    "habitat":"rare",
+                    "isLegendary":true
+                }
+                "#
             )
         );
     }
