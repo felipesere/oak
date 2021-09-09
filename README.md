@@ -21,8 +21,9 @@ as they come up.
 
 * [ ] Server
   * [ ] Sketch out a basic server with a single endpoint that retrieves the Pokemon from the live PokeApi
-      * [ ] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
+      * [x] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
       * [ ] Write a type that serializes to the desiered JSON format and replace the string :arrow_up:
+  * [ ] Server settings for port
 
 * [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
 
