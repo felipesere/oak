@@ -4,7 +4,7 @@ A fun Pokédex that combines timeless brands PokéMon and StarWars with a classi
 
 # TODO and thoughts
 
-* [ ] Build a client for the Pokemon API
+* [x] Build a client for the Pokemon API
   * [x] Serialize Pokemon JSON to a "PokemonAPI struct"
   * [x] Create a struct that represents `PokemonSettings` that produces a `PokemonClient`
   * [x] use reqwest to fire off any requests
@@ -16,6 +16,8 @@ A fun Pokédex that combines timeless brands PokéMon and StarWars with a classi
 * [ ] Build a client for the translations API
   * [ ] Serialize a response from the Translations API
   * [ ] use reqwest to fire off any requests
+
+* [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
 
 
 ## Thoughts
