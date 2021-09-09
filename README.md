@@ -22,7 +22,8 @@ as they come up.
 * [ ] Server
   * [ ] Sketch out a basic server with a single endpoint that retrieves the Pokemon from the live PokeApi
       * [x] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
-      * [ ] Write a type that serializes to the desiered JSON format and replace the string :arrow_up:
+      * [x] Write a type that serializes to the desiered JSON format
+      * [ ] Use new type in hardcoded response
   * [ ] Server settings for port
 
 * [x] Setup CI with Github Actions (is this still free?) or CircleCI
