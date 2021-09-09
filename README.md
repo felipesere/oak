@@ -3,6 +3,8 @@ A fun Pokédex that combines timeless brands PokéMon and StarWars with a classi
 
 
 # TODO and thoughts
+The list below is no strict order. Its a place to keep track of elements/structures I am considering
+as they come up.
 
 * [x] Build a client for the Pokemon API
   * [x] Serialize Pokemon JSON to a "PokemonAPI struct"
@@ -16,6 +18,11 @@ A fun Pokédex that combines timeless brands PokéMon and StarWars with a classi
 * [ ] Build a client for the translations API
   * [ ] Serialize a response from the Translations API
   * [ ] use reqwest to fire off any requests
+
+* [ ] Server
+  * [ ] Sketch out a basic server with a single endpoint that retrieves the Pokemon from the live PokeApi
+      * [ ] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
+      * [ ] Write a type that serializes to the desiered JSON format and replace the string :arrow_up:
 
 * [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
 
