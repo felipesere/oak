@@ -4,6 +4,7 @@ use std::time::Duration;
 use thiserror::Error;
 
 // TODO: Consider a custom deserializer and custom types
+// TODO: Consider if I want to break this file up into several parts
 
 #[derive(Deserialize, Debug)]
 struct Habitat {
@@ -31,14 +32,14 @@ struct Pokemon {
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 struct PokeApiSettings {
-    domain: String,
+    base_url: String,
     #[serde(with = "humantime_serde")]
     timeout: Duration,
 }
 
 impl From<PokeApiSettings> for PokeClient {
     fn from(settings: PokeApiSettings) -> Self {
-        PokeClient::new(settings.domain, settings.timeout)
+        PokeClient::new(settings.base_url, settings.timeout)
     }
 }
 
@@ -109,12 +110,13 @@ mod tests {
 
     async fn setup() -> (PokeClient, MockServer) {
         let poke_server = MockServer::start().await;
-        let client = PokeClient::new(
-            format!("http://{}", poke_server.address()),
-            CONNECTION_TIMEOUT,
-        );
 
-        (client, poke_server)
+        let settings = PokeApiSettings {
+            base_url: format!("http://{}", poke_server.address().to_string()),
+            timeout: CONNECTION_TIMEOUT,
+        };
+
+        (settings.into(), poke_server)
     }
 
     #[test]
@@ -211,7 +213,7 @@ mod tests {
     #[test]
     fn reads_configuration() {
         let pokeapi_yaml = r#"
-            domain: somewhere.com
+            base_url: http://somewhere.com:123
             timeout: 15s
         "#;
 
@@ -221,7 +223,7 @@ mod tests {
         assert_eq!(
             pokeapi_settings,
             PokeApiSettings {
-                domain: "somewhere.com".into(),
+                base_url: "http://somewhere.com:123".into(),
                 timeout: Duration::from_secs(15),
             }
         );
