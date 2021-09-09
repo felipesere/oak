@@ -14,18 +14,33 @@ async fn find_pokemon(_poke_api: &State<PokeClient>, name: &str) -> Json<Pokemon
     })
 }
 
-#[rocket::launch]
-fn rocket() -> Rocket<Build> {
-    // TODO: This is a placeholder until configuration is sorted
-    let poke_api_client: PokeClient = PokeApiSettings {
-        base_url: "https://pokeapi.co".to_string(),
-        timeout: std::time::Duration::from_secs(10),
+struct Settings {
+    poke_api: PokeApiSettings,
+}
+
+impl Settings {
+    fn poke_api_client(&self) -> PokeClient {
+        self.poke_api.clone().into()
     }
-    .into();
+}
+
+fn rocket(settings: Settings) -> Rocket<Build> {
+    let poke_api_client = settings.poke_api_client();
 
     rocket::build()
         .manage(poke_api_client)
         .mount("/", rocket::routes![find_pokemon])
+}
+#[rocket::main]
+async fn main() {
+    let settings = Settings {
+        poke_api: PokeApiSettings {
+            base_url: "https://pokeapi.co".to_string(),
+            timeout: std::time::Duration::from_secs(10),
+        },
+    };
+
+    let _ = rocket(settings).launch().await;
 }
 
 #[derive(Serialize)]
@@ -47,7 +62,15 @@ mod test {
     fn sketch_of_how_to_use_rocket_testing_facilities() {
         use rocket::local::blocking::Client;
 
-        let client = Client::tracked(rocket()).unwrap();
+        // TODO: Use Wiremock like in pokeapi.rs once we test the endpoint in earnest.
+        let live_settings = Settings {
+            poke_api: PokeApiSettings {
+                base_url: "https://pokeapi.co".to_string(),
+                timeout: std::time::Duration::from_secs(10),
+            },
+        };
+
+        let client = Client::tracked(rocket(live_settings)).unwrap();
         let response = client.get("/pokemon/mewtwo").dispatch();
         assert_eq!(response.status(), Status::Ok);
         let mewtwo_json = response.into_string().expect("Unexpected empty response");

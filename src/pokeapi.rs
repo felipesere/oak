@@ -30,7 +30,7 @@ pub(crate) struct Pokemon {
     flavor_text_entries: Vec<FlavorText>,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub(crate) struct PokeApiSettings {
     pub(crate) base_url: String,
     #[serde(with = "humantime_serde")]
