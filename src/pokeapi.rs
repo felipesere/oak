@@ -59,6 +59,7 @@ impl PokeClient {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 enum Error {
     #[error("Did not find '{}'", .pokemon)]
@@ -69,6 +70,7 @@ enum Error {
     Other(#[from] reqwest::Error),
 }
 
+#[allow(dead_code)]
 impl PokeClient {
     async fn find(&self, name: &str) -> Result<Pokemon, Error> {
         self.client
