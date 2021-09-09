@@ -25,6 +25,7 @@ as they come up.
       * [ ] Write a type that serializes to the desiered JSON format and replace the string :arrow_up:
   * [ ] Server settings for port
 
+* [ ] Setup CI with Github Actions (is this still free?) or CircleCI
 * [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
 
 
