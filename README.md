@@ -14,7 +14,7 @@ as they come up.
   * [x] use reqwest to fire off any requests
     * [x] Use Wiremock for local testing
 
-* [ ] Find the right the flavour text in the right language and construct a smaller Pokemon type
+* [x] Find the right the flavour text in the right language and construct a smaller Pokemon type
   * [?] ...or do that with some custom Serde magic
 
 * [ ] Build a client for the translations API
@@ -27,6 +27,8 @@ as they come up.
       * [x] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
       * [x] Write a type that serializes to the desiered JSON format
       * [x] Use new type in hardcoded response
+      * [x] Untranslated response is good to go
+
   * [ ] Server settings
     * [x] Sketch out a type
     * [ ] Read up on figmet to support multiple types of configurations, but at least ENV vars (e.g. port!) and YAML
