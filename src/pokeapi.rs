@@ -71,23 +71,37 @@ impl PokeClient {
 
     #[allow(dead_code)]
     pub(crate) async fn find(&self, name: &str) -> Result<Pokemon, Error> {
+        log::info!("Getting information about {}", name);
+
         self.client
             .get(format!("{}/api/v2/pokemon-species/{}", self.domain, name))
             .send()
             .await?
             .error_for_status()
             .map_err(|e| match e.status() {
-                Some(StatusCode::NOT_FOUND) => Error::NoSuchPokemon {
-                    pokemon: name.to_string(),
-                },
-                _ => Error::Other(e),
+                Some(StatusCode::NOT_FOUND) => {
+                    log::error!("Did not find {} on the PokeApi", name);
+                    Error::NoSuchPokemon {
+                        pokemon: name.to_string(),
+                    }
+                }
+                _ => {
+                    log::error!(
+                        "Unexpected error when getting respose from PokeApi for {}: {}",
+                        name,
+                        e
+                    );
+                    Error::Other(e)
+                }
             })?
             .json::<Pokemon>()
             .await
             .map_err(|e| {
                 if e.is_decode() {
+                    log::error!("Received bad JSON for {}: {}", name, e);
                     Error::BadJson
                 } else {
+                    log::error!("Unexpected deserializing JSON for {}: {}", name, e);
                     Error::Other(e)
                 }
             })

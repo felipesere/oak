@@ -31,6 +31,12 @@ as they come up.
     * [x] Sketch out a type
     * [ ] Read up on figmet to support multiple types of configurations, but at least ENV vars (e.g. port!) and YAML
     * [ ] Server settings for port
+  * [ ] Consider elevating the tests to integration tests rather than unit tests
+
+* [ ] Logging & Tracing
+    * [x] Add some basic logs to the PokeApi
+    * [ ] Consider using tokios `tracing` but it will need pretty manual setup
+    * [ ] Consider outputing JSON rather than just a log file
 
 * [x] Setup CI with Github Actions (is this still free?) or CircleCI
 * [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
