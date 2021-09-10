@@ -66,6 +66,42 @@ mod test {
         Mock, MockServer, ResponseTemplate,
     };
 
+    #[test]
+    fn serializes_pokemon_responses_to_the_adequate_json() {
+        let mewtwo = PokemonResponse {
+            name: "mewtwo".into(),
+            description: "It was created by scientists after years...".into(),
+            habitat: "rare".into(),
+            is_legendary: true,
+        };
+
+        let actual_json =
+            serde_json::to_string(&mewtwo).expect("unable to serialize MewTwo to JSON");
+
+        assert_json_eq!(
+            json(&actual_json),
+            json(
+                r#"
+                {
+                    "name": "mewtwo",
+                    "description": "It was created by scientists after years...",
+                    "habitat":"rare",
+                    "isLegendary":true
+                }
+                "#
+            )
+        );
+    }
+
+    fn json(input: &str) -> serde_json::Value {
+        match serde_json::from_str::<serde_json::Value>(input) {
+            Ok(value) => value,
+            Err(err) => {
+                panic!("Did not get valid JSON: {}. Context\n{}", err, input)
+            }
+        }
+    }
+
     const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
 
     async fn setup() -> (Settings, MockServer) {
@@ -114,39 +150,4 @@ mod test {
         );
     }
 
-    #[test]
-    fn serializes_pokemon_responses_to_the_adequate_json() {
-        let mewtwo = PokemonResponse {
-            name: "mewtwo".into(),
-            description: "It was created by scientists after years...".into(),
-            habitat: "rare".into(),
-            is_legendary: true,
-        };
-
-        let actual_json =
-            serde_json::to_string(&mewtwo).expect("unable to serialize MewTwo to JSON");
-
-        assert_json_eq!(
-            json(&actual_json),
-            json(
-                r#"
-                {
-                    "name": "mewtwo",
-                    "description": "It was created by scientists after years...",
-                    "habitat":"rare",
-                    "isLegendary":true
-                }
-                "#
-            )
-        );
-    }
-
-    fn json(input: &str) -> serde_json::Value {
-        match serde_json::from_str::<serde_json::Value>(input) {
-            Ok(value) => value,
-            Err(err) => {
-                panic!("Did not get valid JSON: {}. Context\n{}", err, input)
-            }
-        }
-    }
 }
