@@ -18,8 +18,11 @@ as they come up.
   * [?] ...or do that with some custom Serde magic
 
 * [ ] Build a client for the translations API
-  * [ ] Serialize a response from the Translations API
-  * [ ] use reqwest to fire off any requests
+  * [x] Serialize a response from the Translations API
+  * [x] use reqwest to fire off any requests
+  * [x] Definitly cover the error of rate limiting!
+  * [ ] Handle bad JSON
+  * [ ] Add some rudimentary logging
 
 * [ ] Server
   * [ ] Break server out into its own module

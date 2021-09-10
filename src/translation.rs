@@ -1,6 +1,7 @@
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use thiserror::Error;
 
 #[derive(Debug, Deserialize)]
 struct Contents {
@@ -44,8 +45,13 @@ impl std::fmt::Display for Language {
     }
 }
 
-#[derive(Debug)]
-enum Error {}
+#[derive(Error, Debug)]
+enum Error {
+    #[error("Hit the hourly rate limit when trying to translate")]
+    RateLimitHit,
+    #[error("Unexpected error from translation API")]
+    Other(#[from] reqwest::Error),
+}
 
 impl TranslationClient {
     fn new(domain: String, timeout: Duration) -> TranslationClient {
@@ -72,7 +78,15 @@ impl TranslationClient {
             .json(&Text { text: text.into() })
             .send()
             .await
-            .expect("Failed to transfer request?")
+            .expect("???")
+            .error_for_status()
+            .map_err(|e| {
+                if let Some(StatusCode::TOO_MANY_REQUESTS) = e.status() {
+                    Error::RateLimitHit
+                } else {
+                    Error::Other(e)
+                }
+            })?
             .json::<ExtendedTranslation>()
             .await
             .expect("Failed to turn translation to JSON");
@@ -84,6 +98,7 @@ impl TranslationClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use pretty_assertions::assert_eq;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -169,7 +184,7 @@ mod tests {
             .await;
 
         let shakespeare_translation = client
-            .translate("This is fantastic", Language::Shakespear)
+            .translate("Any sentence...", Language::Shakespear)
             .await
             .expect("Unable to get translation");
 
@@ -177,5 +192,32 @@ mod tests {
             shakespeare_translation.contents.translated,
             "Thee did giveth mr. Tim a hearty meal, but unfortunately what did doth englut did maketh him kicketh the bucket.".to_string()
         );
+    }
+
+    #[tokio::test]
+    async fn reports_an_error_when_rate_limit_has_been_hit() {
+        let (client, mock_server) = setup().await;
+
+        Mock::given(method("POST"))
+            .and(path("/translate/yoda"))
+            .respond_with(ResponseTemplate::new(429).set_body_raw(
+                r#"{
+                    "error": {
+                        "code": 429,
+                        "message": "Too Many Requests: Rate limit of 5 requests per hour exceeded. Please wait for 17 minutes and 41 seconds."
+                    }
+                }"#,
+                "application/json",
+            ))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let err = client
+            .translate("This is fantastic", Language::Yoda)
+            .await
+            .expect_err("Request should have failed due to rate limiting");
+
+        assert_matches!(err, Error::RateLimitHit)
     }
 }
