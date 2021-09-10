@@ -49,6 +49,8 @@ impl std::fmt::Display for Language {
 enum Error {
     #[error("Hit the hourly rate limit when trying to translate")]
     RateLimitHit,
+    #[error("Tried to deserialize invalid translation")]
+    BadJson,
     #[error("Unexpected error from translation API")]
     Other(#[from] reqwest::Error),
 }
@@ -89,7 +91,13 @@ impl TranslationClient {
             })?
             .json::<ExtendedTranslation>()
             .await
-            .expect("Failed to turn translation to JSON");
+            .map_err(|e| {
+                if e.is_decode() {
+                    Error::BadJson
+                } else {
+                    Error::Other(e)
+                }
+            })?;
 
         Ok(translation)
     }
@@ -219,5 +227,24 @@ mod tests {
             .expect_err("Request should have failed due to rate limiting");
 
         assert_matches!(err, Error::RateLimitHit)
+    }
+
+    #[tokio::test]
+    async fn reports_an_error_for_bad_json() {
+        let (client, mock_server) = setup().await;
+
+        Mock::given(method("POST"))
+            .and(path("/translate/yoda"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw("{ }", "application/json"))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let err = client
+            .translate("This is fantastic", Language::Yoda)
+            .await
+            .expect_err("Request should have failed due to bad JSON");
+
+        assert_matches!(err, Error::BadJson)
     }
 }
