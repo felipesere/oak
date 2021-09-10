@@ -35,6 +35,15 @@ enum Language {
     Shakespear,
 }
 
+impl std::fmt::Display for Language {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Language::Yoda => write!(f, "yoda"),
+            Language::Shakespear => write!(f, "shakespeare"),
+        }
+    }
+}
+
 #[derive(Debug)]
 enum Error {}
 
@@ -50,15 +59,16 @@ impl TranslationClient {
     async fn translate<S: Into<String>>(
         &self,
         text: S,
-        _language: Language,
+        language: Language,
     ) -> Result<ExtendedTranslation, Error> {
         #[derive(Serialize)]
         struct Text {
             text: String,
         }
 
-        let translation = self.client
-            .post(format!("{}/translate/yoda", self.domain))
+        let translation = self
+            .client
+            .post(format!("{}/translate/{}", self.domain, language))
             .json(&Text { text: text.into() })
             .send()
             .await
@@ -141,6 +151,31 @@ mod tests {
         assert_eq!(
             yoda_translation.contents.translated,
             "Fantastic,  this is".to_string()
+        );
+    }
+
+    #[tokio::test]
+    async fn translates_a_weird_sentence_to_shakespeare_english() {
+        let (client, mock_server) = setup().await;
+
+        Mock::given(method("POST"))
+            .and(path("/translate/shakespeare"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(
+                include_str!("../examples/translation/shakespeare.json"),
+                "application/json",
+            ))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let shakespeare_translation = client
+            .translate("This is fantastic", Language::Shakespear)
+            .await
+            .expect("Unable to get translation");
+
+        assert_eq!(
+            shakespeare_translation.contents.translated,
+            "Thee did giveth mr. Tim a hearty meal, but unfortunately what did doth englut did maketh him kicketh the bucket.".to_string()
         );
     }
 }
