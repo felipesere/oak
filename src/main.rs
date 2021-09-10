@@ -4,6 +4,7 @@ use rocket::{serde::json::Json, Build, Rocket, State};
 use serde::Serialize;
 
 mod pokeapi;
+mod translation;
 
 #[derive(Serialize)]
 struct ApiError {
