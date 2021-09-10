@@ -52,7 +52,19 @@ enum Error {
     #[error("Tried to deserialize invalid translation")]
     BadJson,
     #[error("Unexpected error from translation API")]
-    Other(#[from] reqwest::Error),
+    Other(reqwest::Error),
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        if let Some(StatusCode::TOO_MANY_REQUESTS) = err.status() {
+            Error::RateLimitHit
+        } else if err.is_decode() {
+            Error::BadJson
+        } else {
+            Error::Other(err)
+        }
+    }
 }
 
 impl TranslationClient {
@@ -79,25 +91,10 @@ impl TranslationClient {
             .post(format!("{}/translate/{}", self.domain, language))
             .json(&Text { text: text.into() })
             .send()
-            .await
-            .expect("???")
-            .error_for_status()
-            .map_err(|e| {
-                if let Some(StatusCode::TOO_MANY_REQUESTS) = e.status() {
-                    Error::RateLimitHit
-                } else {
-                    Error::Other(e)
-                }
-            })?
+            .await?
+            .error_for_status()?
             .json::<ExtendedTranslation>()
-            .await
-            .map_err(|e| {
-                if e.is_decode() {
-                    Error::BadJson
-                } else {
-                    Error::Other(e)
-                }
-            })?;
+            .await?;
 
         Ok(translation)
     }
