@@ -1,20 +1,36 @@
 use pokeapi::{PokeApiSettings, PokeClient};
+use rocket::http::Status;
 use rocket::{serde::json::Json, Build, Rocket, State};
 use serde::Serialize;
 
 mod pokeapi;
 
-#[rocket::get("/pokemon/<name>")]
-async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> Json<PokemonResponse> {
-    // TODO: Use this when we have the Pokemon transformation settled
-    let _ = poke_api.find(name).await;
+#[derive(Serialize)]
+struct ApiError {
+    message: String,
+}
 
-    Json(PokemonResponse {
-        name: name.into(),
-        description: "It was created by scientists after years...".into(),
-        habitat: "rare".into(),
-        is_legendary: true,
-    })
+type ApiResult<T> = Result<Json<T>, (Status, Json<ApiError>)>;
+
+fn ok<T>(value: T) -> ApiResult<T> {
+    Result::Ok(Json(value))
+}
+
+fn not_found<T>(message: String) -> ApiResult<T> {
+    Result::Err((Status::NotFound, Json(ApiError { message })))
+}
+
+#[rocket::get("/pokemon/<name>")]
+async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<PokemonResponse> {
+    match poke_api.find(name).await {
+        Ok(_) => ok(PokemonResponse {
+            name: name.into(),
+            description: "It was created by scientists after years...".into(),
+            habitat: "rare".into(),
+            is_legendary: true,
+        }),
+        Err(_) => not_found(format!("Unable to find '{}'", name)),
+    }
 }
 
 struct Settings {
@@ -150,4 +166,35 @@ mod test {
         );
     }
 
+    #[tokio::test]
+    async fn api_errors_contain_a_indicateive_message() {
+        let (settings, mock_poke_api) = setup().await;
+
+        // There are no Pokemons :(
+        Mock::given(any())
+            .respond_with(ResponseTemplate::new(404))
+            .expect(1)
+            .mount(&mock_poke_api)
+            .await;
+
+        let client = Client::tracked(rocket(settings)).await.unwrap();
+
+        let response = client.get("/pokemon/mewtwo").dispatch().await;
+        assert_eq!(response.status(), Status::NotFound);
+        let error = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&error),
+            json(
+                r#"
+                {
+                    "message": "Unable to find 'mewtwo'"
+                }
+                "#
+            )
+        );
+    }
 }
