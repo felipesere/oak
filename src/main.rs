@@ -21,14 +21,9 @@ fn not_found<T>(message: String) -> ApiResult<T> {
 }
 
 #[rocket::get("/pokemon/<name>")]
-async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<PokemonResponse> {
+async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
-        Ok(_) => ok(PokemonResponse {
-            name: name.into(),
-            description: "It was created by scientists after years...".into(),
-            habitat: "rare".into(),
-            is_legendary: true,
-        }),
+        Ok(pokemon) => ok(pokemon),
         Err(_) => not_found(format!("Unable to find '{}'", name)),
     }
 }
@@ -62,13 +57,15 @@ async fn main() {
     let _ = rocket(settings).launch().await;
 }
 
-#[derive(Serialize)]
-struct PokemonResponse {
-    name: String,
-    description: String,
-    habitat: String,
+// TODO: Consider if I want a similar layer between this external facing "API Pokemon"
+// and the internal "Pokemon"
+#[derive(Debug, Serialize)]
+pub struct Pokemon {
+    pub name: String,
+    pub description: String,
+    pub habitat: String,
     #[serde(rename = "isLegendary")]
-    is_legendary: bool,
+    pub is_legendary: bool,
 }
 
 #[cfg(test)]
@@ -84,7 +81,7 @@ mod test {
 
     #[test]
     fn serializes_pokemon_responses_to_the_adequate_json() {
-        let mewtwo = PokemonResponse {
+        let mewtwo = Pokemon {
             name: "mewtwo".into(),
             description: "It was created by scientists after years...".into(),
             habitat: "rare".into(),
@@ -157,7 +154,7 @@ mod test {
                 r#"
                 {
                     "name": "mewtwo",
-                    "description": "It was created by scientists after years...",
+                    "description": "It was created by a scientist after years of horrific gene splicing and DNA engineering experiments.",
                     "habitat":"rare",
                     "isLegendary":true
                 }

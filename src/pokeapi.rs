@@ -3,8 +3,11 @@ use serde::Deserialize;
 use std::time::Duration;
 use thiserror::Error;
 
+use crate::Pokemon;
+
+const FORM_FEED: char = '\u{000C}';
+
 // TODO: Consider a custom deserializer and custom types
-// TODO: Consider if I want to break this file up into several parts
 
 #[derive(Deserialize, Debug)]
 struct Habitat {
@@ -23,11 +26,34 @@ struct FlavorText {
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct Pokemon {
+struct ExternalPokemon {
     name: String,
     is_legendary: bool,
     habitat: Habitat,
     flavor_text_entries: Vec<FlavorText>,
+}
+
+fn clean_text(input: &str) -> String {
+    input.replace(&['\n', FORM_FEED][..], " ")
+}
+
+// TODO: Consider try_from to cover the case where there is no flavor text
+impl From<ExternalPokemon> for Pokemon {
+    fn from(api_pokemon: ExternalPokemon) -> Self {
+        let description = &api_pokemon
+            .flavor_text_entries
+            .iter()
+            .find(|entry| entry.language.name == "en")
+            .map(|entry| clean_text(&entry.flavor_text))
+            .expect("Pokemon did not have english flavour text");
+
+        Pokemon {
+            name: api_pokemon.name,
+            description: description.to_string(),
+            habitat: api_pokemon.habitat.name,
+            is_legendary: api_pokemon.is_legendary,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -94,7 +120,7 @@ impl PokeClient {
                     Error::Other(e)
                 }
             })?
-            .json::<Pokemon>()
+            .json::<ExternalPokemon>()
             .await
             .map_err(|e| {
                 if e.is_decode() {
@@ -105,6 +131,7 @@ impl PokeClient {
                     Error::Other(e)
                 }
             })
+            .map(Pokemon::from)
     }
 }
 
@@ -120,6 +147,7 @@ mod tests {
     };
 
     const RAW_DITTO: &'static str = include_str!("../examples/ditto.json");
+    const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
     const CONNECTION_TIMEOUT: Duration = Duration::from_millis(100);
 
     async fn setup() -> (PokeClient, MockServer) {
@@ -135,8 +163,8 @@ mod tests {
 
     #[test]
     fn deserializes_ditto() {
-        let ditto =
-            serde_json::from_str::<Pokemon>(RAW_DITTO).expect("unable to deserialize ditto");
+        let ditto = serde_json::from_str::<ExternalPokemon>(RAW_DITTO)
+            .expect("unable to deserialize ditto");
 
         assert_eq!(ditto.name, "ditto".to_string());
         assert!(!ditto.is_legendary);
@@ -148,21 +176,33 @@ mod tests {
         assert_eq!(first_flavour_text.language.name, "en".to_string());
     }
 
+    #[test]
+    fn cleanup_any_line_and_form_feed_characters_from_flavour_text() {
+        // Rust can't represent \f in a literal, see examples/mewtwo.json
+        // for more examples of the form feed
+        let flavor_text = "Its DNA is almost\nthe same as MEW's.\nHowever, its size\u{000C}and disposition\nare vastly dif­\nferent.";
+
+        let clean = r#"Its DNA is almost the same as MEW's. However, its size and disposition are vastly dif­ ferent."#.to_string();
+
+        assert_eq!(clean_text(flavor_text), clean)
+    }
+
     #[tokio::test]
-    async fn retrieves_ditto_from_pokeapi() {
+    async fn retrieves_mewtwo_from_pokeapi() {
         let (client, mock_server) = setup().await;
 
         Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/ditto"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_DITTO, "application/json"))
+            .and(path("/api/v2/pokemon-species/mewtwo"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_MEWTWO, "application/json"))
             .mount(&mock_server)
             .await;
 
-        let ditto = client.find("ditto").await.expect("Failed to get ditto");
+        let mewtwo = client.find("mewtwo").await.expect("Failed to get ditto");
 
-        assert_eq!(ditto.name, "ditto".to_string());
-        assert_eq!(ditto.habitat.name, "urban".to_string());
-        assert!(!ditto.is_legendary);
+        assert_eq!(mewtwo.name, "mewtwo".to_string());
+        assert_eq!(mewtwo.habitat, "rare".to_string());
+        assert_eq!(mewtwo.description, "It was created by a scientist after years of horrific gene splicing and DNA engineering experiments.".to_string());
+        assert!(mewtwo.is_legendary);
     }
 
     #[tokio::test]
