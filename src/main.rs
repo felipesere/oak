@@ -154,7 +154,7 @@ mod test {
     const DIGLETT_AS_SHAKESPEAR: &'static str =
         include_str!("../examples/translation/diglett_shakespeare.json");
 
-    async fn setup() -> (Settings, mocks::MockPokeApi, mocks::MockTranslationApi) {
+    async fn setup() -> (Client, mocks::MockPokeApi, mocks::MockTranslationApi) {
         let poke_server = MockServer::start().await;
 
         let translation_server = MockServer::start().await;
@@ -170,8 +170,10 @@ mod test {
             },
         };
 
+        let client = Client::tracked(rocket(settings)).await.unwrap();
+
         (
-            settings,
+            client,
             mocks::MockPokeApi(poke_server),
             mocks::MockTranslationApi(translation_server),
         )
@@ -179,10 +181,9 @@ mod test {
 
     #[tokio::test]
     async fn requesting_mewtwo_makes_a_call_to_the_pokemon_api() {
-        let (settings, poke_mock, _) = setup().await;
+        let (client, poke_mock, _) = setup().await;
 
         poke_mock.is_present("mewtwo", RAW_MEWTWO).await;
-        let client = Client::tracked(rocket(settings)).await.unwrap();
 
         let response = client.get("/pokemon/mewtwo").dispatch().await;
 
@@ -209,11 +210,9 @@ mod test {
 
     #[tokio::test]
     async fn api_errors_contain_a_indicateive_message() {
-        let (settings, poke_mock, _) = setup().await;
+        let (client, poke_mock, _) = setup().await;
 
         poke_mock.no_pokemon_exist().await;
-
-        let client = Client::tracked(rocket(settings)).await.unwrap();
 
         let response = client.get("/pokemon/mewtwo").dispatch().await;
         assert_eq!(response.status(), Status::NotFound);
@@ -236,12 +235,12 @@ mod test {
 
     #[tokio::test]
     async fn when_asking_for_a_translation_the_description_of_a_cave_pokemon_is_in_yoda_speak() {
-        let (settings, poke_mock, translation_mock) = setup().await;
+        let (client, poke_mock, translation_mock) = setup().await;
 
         poke_mock.is_present("diglett", RAW_DIGLETT).await;
-        translation_mock.can_translate(Language::Yoda, DIGLETT_AS_SHAKESPEAR).await;
-
-        let client = Client::tracked(rocket(settings)).await.unwrap();
+        translation_mock
+            .can_translate(Language::Yoda, DIGLETT_AS_SHAKESPEAR)
+            .await;
 
         let response = client.get("/pokemon/translated/diglett").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
@@ -267,12 +266,10 @@ mod test {
 
     #[tokio::test]
     async fn when_the_translation_fails_we_fall_back_to_the_standard_description() {
-        let (settings, poke_mock, translation_mock) = setup().await;
+        let (client, poke_mock, translation_mock) = setup().await;
 
         poke_mock.is_present("diglett", RAW_DIGLETT).await;
         translation_mock.fails_to_translate(Language::Yoda).await;
-
-        let client = Client::tracked(rocket(settings)).await.unwrap();
 
         let response = client.get("/pokemon/translated/diglett").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
@@ -348,7 +345,6 @@ mod test {
 
                 self.0.register(mock).await;
             }
-
         }
     }
 }
