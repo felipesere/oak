@@ -107,11 +107,10 @@ pub struct Pokemon {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{Language, Pokemon};
     use assert_json_diff::assert_json_eq;
+    use mocks::*;
     use rocket::http::Status;
-    use rocket::local::asynchronous::Client;
-    use wiremock::MockServer;
 
     #[test]
     fn serializes_pokemon_responses_to_the_adequate_json() {
@@ -147,36 +146,6 @@ mod test {
                 panic!("Did not get valid JSON: {}. Context\n{}", err, input)
             }
         }
-    }
-
-    const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
-    const RAW_DIGLETT: &'static str = include_str!("../examples/diglett.json");
-    const DIGLETT_AS_SHAKESPEAR: &'static str =
-        include_str!("../examples/translation/diglett_shakespeare.json");
-
-    async fn setup() -> (Client, mocks::MockPokeApi, mocks::MockTranslationApi) {
-        let poke_server = MockServer::start().await;
-
-        let translation_server = MockServer::start().await;
-
-        let settings = Settings {
-            poke_api: PokeApiSettings {
-                base_url: format!("http://{}", poke_server.address().to_string()),
-                timeout: std::time::Duration::from_secs(3),
-            },
-            translation_api: TranslationSettings {
-                base_url: format!("http://{}", translation_server.address().to_string()),
-                timeout: std::time::Duration::from_secs(3),
-            },
-        };
-
-        let client = Client::tracked(rocket(settings)).await.unwrap();
-
-        (
-            client,
-            mocks::MockPokeApi(poke_server),
-            mocks::MockTranslationApi(translation_server),
-        )
     }
 
     #[tokio::test]
@@ -294,11 +263,45 @@ mod test {
     }
 
     pub mod mocks {
-        use super::*;
+        use crate::rocket;
+        use crate::translation::Language;
+        use crate::{pokeapi::PokeApiSettings, translation::TranslationSettings, Settings};
+
+        use rocket::local::asynchronous::Client;
         use wiremock::{
             matchers::{any, method, path},
             Mock, MockServer, ResponseTemplate,
         };
+
+        pub const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
+        pub const RAW_DIGLETT: &'static str = include_str!("../examples/diglett.json");
+        pub const DIGLETT_AS_SHAKESPEAR: &'static str =
+            include_str!("../examples/translation/diglett_shakespeare.json");
+
+        pub async fn setup() -> (Client, MockPokeApi, MockTranslationApi) {
+            let poke_server = MockServer::start().await;
+
+            let translation_server = MockServer::start().await;
+
+            let settings = Settings {
+                poke_api: PokeApiSettings {
+                    base_url: format!("http://{}", poke_server.address().to_string()),
+                    timeout: std::time::Duration::from_secs(3),
+                },
+                translation_api: TranslationSettings {
+                    base_url: format!("http://{}", translation_server.address().to_string()),
+                    timeout: std::time::Duration::from_secs(3),
+                },
+            };
+
+            let client = Client::tracked(rocket(settings)).await.unwrap();
+
+            (
+                client,
+                MockPokeApi(poke_server),
+                MockTranslationApi(translation_server),
+            )
+        }
 
         pub struct MockPokeApi(pub MockServer);
 
