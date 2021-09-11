@@ -20,6 +20,7 @@ pub(crate) struct TranslationClient {
     domain: String,
 }
 
+#[derive(Clone)]
 pub(crate) struct TranslationSettings {
     pub(crate) base_url: String,
     pub(crate) timeout: Duration,
