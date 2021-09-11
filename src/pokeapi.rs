@@ -146,8 +146,8 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
-    const RAW_DITTO: &'static str = include_str!("../examples/ditto.json");
-    const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
+    const RAW_DITTO: &'static str = include_str!("../examples/pokeapi/ditto.json");
+    const RAW_MEWTWO: &'static str = include_str!("../examples/pokeapi/mewtwo.json");
     const CONNECTION_TIMEOUT: Duration = Duration::from_millis(100);
 
     async fn setup() -> (PokeClient, MockServer) {

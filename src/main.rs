@@ -343,9 +343,9 @@ mod test {
             Mock, MockServer, ResponseTemplate,
         };
 
-        pub const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
-        pub const RAW_DIGLETT: &'static str = include_str!("../examples/diglett.json");
-        pub const RAW_BULBASAUR: &'static str = include_str!("../examples/bulbasaur.json");
+        pub const RAW_MEWTWO: &'static str = include_str!("../examples/pokeapi/mewtwo.json");
+        pub const RAW_DIGLETT: &'static str = include_str!("../examples/pokeapi/diglett.json");
+        pub const RAW_BULBASAUR: &'static str = include_str!("../examples/pokeapi/bulbasaur.json");
 
         pub const DIGLETT_AS_YODA: &'static str =
             include_str!("../examples/translation/diglett_yoda.json");
