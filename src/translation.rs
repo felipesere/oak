@@ -32,7 +32,6 @@ impl From<TranslationSettings> for TranslationClient {
     }
 }
 
-#[allow(dead_code)]
 pub(crate) enum Language {
     Yoda,
     Shakespear,

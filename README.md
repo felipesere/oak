@@ -21,7 +21,8 @@ as they come up.
   * [x] Serialize a response from the Translations API
   * [x] use reqwest to fire off any requests
   * [x] Definitly cover the error of rate limiting!
-  * [ ] Handle bad JSON
+     * [ ] Consider logging the remaining Rate-Limiting response header!
+  * [x] Handle bad JSON
   * [ ] Add some rudimentary logging
 
 * [ ] Server
@@ -31,13 +32,13 @@ as they come up.
       * [x] Write a type that serializes to the desiered JSON format
       * [x] Use new type in hardcoded response
       * [x] Untranslated response is good to go
-   * [ ] Sketch out translation endpoint
+   * [x] Sketch out translation endpoint
       * [x] Write an endpoint `GET /pokemon/translated/mewtwo` with a hardcoded response
       * [x] Wire in the Translation API client
       * [~] Apply rule for Yoda translation
           * [x] cave
-          * [ ] legendary
-      * [ ] Use shakespear translation
+          * [x] legendary
+      * [x] Use shakespear translation
 
 * [ ] See if I can lift `mocks::` into its own module/crate that can be used from all tests?
 

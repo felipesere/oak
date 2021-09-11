@@ -26,6 +26,7 @@ fn not_found<T>(message: String) -> ApiResult<T> {
 async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
         Ok(pokemon) => ok(pokemon),
+        // TODO: Surface more accurate errors
         Err(_) => not_found(format!("Unable to find '{}'", name)),
     }
 }
@@ -38,9 +39,13 @@ async fn find_translated_pokemon(
 ) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
         Ok(mut pokemon) => {
-            let possible_translation = translation_api
-                .translate(&pokemon.description, Language::Yoda)
-                .await;
+            let lang = if pokemon.is_legendary || &pokemon.habitat == "cave" {
+                Language::Yoda
+            } else {
+                Language::Shakespear
+            };
+
+            let possible_translation = translation_api.translate(&pokemon.description, lang).await;
 
             if let Ok(translated) = possible_translation {
                 pokemon.description = translated;
@@ -48,6 +53,7 @@ async fn find_translated_pokemon(
 
             ok(pokemon)
         }
+        // TODO: Surface more accurate errors
         Err(_) => not_found(format!("Unable to find '{}'", name)),
     }
 }
@@ -266,6 +272,38 @@ mod test {
     }
 
     #[tokio::test]
+    async fn non_legendary_or_cave_pokemon_are_translated_to_shakespearan_english() {
+        let (client, poke_mock, translation_mock) = setup().await;
+
+        // Just a plain bulbasaur
+        poke_mock.is_present("bulbasaur", RAW_BULBASAUR).await;
+        translation_mock
+            .can_translate(Language::Shakespear, BULBASAUR_AS_SHAKESPEARE)
+            .await;
+
+        let response = client.get("/pokemon/translated/bulbasaur").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        let bulbasaur_json = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&bulbasaur_json),
+            json(
+                r#"
+                {
+                    "name": "bulbasaur",
+                    "description": "A strange seed wast planted on its back at birth. The plant sprouts and grows with this pokémon.",
+                    "habitat":"grassland",
+                    "isLegendary": false
+                }
+                "#
+            )
+        );
+    }
+
+    #[tokio::test]
     async fn when_the_translation_fails_we_fall_back_to_the_standard_description() {
         let (client, poke_mock, translation_mock) = setup().await;
 
@@ -307,10 +345,14 @@ mod test {
 
         pub const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
         pub const RAW_DIGLETT: &'static str = include_str!("../examples/diglett.json");
+        pub const RAW_BULBASAUR: &'static str = include_str!("../examples/bulbasaur.json");
+
         pub const DIGLETT_AS_YODA: &'static str =
             include_str!("../examples/translation/diglett_yoda.json");
         pub const MEWTWO_AS_YODA: &'static str =
             include_str!("../examples/translation/mewtwo_yoda.json");
+        pub const BULBASAUR_AS_SHAKESPEARE: &'static str =
+            include_str!("../examples/translation/bulbasaur_shakespeare.json");
 
         pub async fn setup() -> (Client, MockPokeApi, MockTranslationApi) {
             let poke_server = MockServer::start().await;
