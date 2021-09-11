@@ -112,7 +112,7 @@ mod test {
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
     use wiremock::{
-        matchers::{any, method, path},
+        matchers::{method, path},
         Mock, MockServer, ResponseTemplate,
     };
 
@@ -157,8 +157,7 @@ mod test {
     const DIGLETT_AS_SHAKESPEAR: &'static str =
         include_str!("../examples/translation/diglett_shakespeare.json");
 
-    // TODO: Consider wrapping these to MockServer into custom types?
-    async fn setup() -> (Settings, MockServer, MockServer) {
+    async fn setup() -> (Settings, mocks::MockPokeApi, MockServer) {
         let poke_server = MockServer::start().await;
 
         let translation_server = MockServer::start().await;
@@ -174,19 +173,18 @@ mod test {
             },
         };
 
-        (settings, poke_server, translation_server)
+        (
+            settings,
+            mocks::MockPokeApi(poke_server),
+            translation_server,
+        )
     }
 
     #[tokio::test]
     async fn requesting_mewtwo_makes_a_call_to_the_pokemon_api() {
-        let (settings, mock_poke_api, _) = setup().await;
+        let (settings, poke_mock, _) = setup().await;
 
-        Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/mewtwo"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_MEWTWO, "application/json"))
-            .expect(1)
-            .mount(&mock_poke_api)
-            .await;
+        poke_mock.is_present("mewtwo", RAW_MEWTWO).await;
 
         let client = Client::tracked(rocket(settings)).await.unwrap();
         let response = client.get("/pokemon/mewtwo").dispatch().await;
@@ -212,14 +210,9 @@ mod test {
 
     #[tokio::test]
     async fn api_errors_contain_a_indicateive_message() {
-        let (settings, mock_poke_api, _) = setup().await;
+        let (settings, poke_mock, _) = setup().await;
 
-        // There are no Pokemons :(
-        Mock::given(any())
-            .respond_with(ResponseTemplate::new(404))
-            .expect(1)
-            .mount(&mock_poke_api)
-            .await;
+        poke_mock.no_pokemon_exist().await;
 
         let client = Client::tracked(rocket(settings)).await.unwrap();
 
@@ -244,15 +237,9 @@ mod test {
 
     #[tokio::test]
     async fn when_asking_for_a_translation_the_description_of_a_cave_pokemon_is_in_yoda_speak() {
-        let (settings, mock_poke_api, mock_translation_api) = setup().await;
+        let (settings, poke_mock, mock_translation_api) = setup().await;
 
-        // diglett is the best cave Pokemon
-        Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/diglett"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_DIGLETT, "application/json"))
-            .expect(1)
-            .mount(&mock_poke_api)
-            .await;
+        poke_mock.is_present("diglett", RAW_DIGLETT).await;
 
         // TODO: Check the body of the post at least has the '.text' key!
         Mock::given(method("POST"))
@@ -290,16 +277,11 @@ mod test {
 
     #[tokio::test]
     async fn when_the_translation_fails_we_fall_back_to_the_standard_description() {
-        let (settings, mock_poke_api, mock_translation_api) = setup().await;
+        let (settings, poke_mock, mock_translation_api) = setup().await;
 
-        // diglett is the best cave Pokemon
-        Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/diglett"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_DIGLETT, "application/json"))
-            .expect(1)
-            .mount(&mock_poke_api)
-            .await;
+        poke_mock.is_present("diglett", RAW_DIGLETT).await;
 
+        // diglett is the best cave Pokemo
         Mock::given(method("POST"))
             .and(path("/translate/yoda"))
             .respond_with(ResponseTemplate::new(500))
@@ -329,5 +311,35 @@ mod test {
                 "#
             )
         );
+    }
+
+    pub mod mocks {
+        use wiremock::{
+            matchers::{any, method, path},
+            Mock, MockServer, ResponseTemplate,
+        };
+
+        pub struct MockPokeApi(pub MockServer);
+
+        impl MockPokeApi {
+            pub async fn is_present(&self, pokemon: &'static str, response: &'static str) {
+                let mock = Mock::given(method("GET"))
+                    .and(path(format!("/api/v2/pokemon-species/{}", pokemon)))
+                    .respond_with(
+                        ResponseTemplate::new(200).set_body_raw(response, "application/json"),
+                    )
+                    .expect(1);
+
+                self.0.register(mock).await;
+            }
+
+            pub async fn no_pokemon_exist(&self) {
+                let mock = Mock::given(any())
+                    .respond_with(ResponseTemplate::new(404))
+                    .expect(1);
+
+                self.0.register(mock).await;
+            }
+        }
     }
 }
