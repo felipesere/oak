@@ -208,7 +208,7 @@ mod test {
 
         poke_mock.is_present("diglett", RAW_DIGLETT).await;
         translation_mock
-            .can_translate(Language::Yoda, DIGLETT_AS_SHAKESPEAR)
+            .can_translate(Language::Yoda, DIGLETT_AS_YODA)
             .await;
 
         let response = client.get("/pokemon/translated/diglett").dispatch().await;
@@ -275,8 +275,8 @@ mod test {
 
         pub const RAW_MEWTWO: &'static str = include_str!("../examples/mewtwo.json");
         pub const RAW_DIGLETT: &'static str = include_str!("../examples/diglett.json");
-        pub const DIGLETT_AS_SHAKESPEAR: &'static str =
-            include_str!("../examples/translation/diglett_shakespeare.json");
+        pub const DIGLETT_AS_YODA: &'static str =
+            include_str!("../examples/translation/diglett_yoda.json");
 
         pub async fn setup() -> (Client, MockPokeApi, MockTranslationApi) {
             let poke_server = MockServer::start().await;
