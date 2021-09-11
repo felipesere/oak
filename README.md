@@ -31,6 +31,10 @@ as they come up.
       * [x] Write a type that serializes to the desiered JSON format
       * [x] Use new type in hardcoded response
       * [x] Untranslated response is good to go
+   * [ ] Sketch out translation endpoint
+      * [ ] Write an endpoint `GET /pokemon/translated/mewtwo` with a hardcoded response
+      * [ ] Wire in the Translation API client
+      * [ ] Apply rule for Yoda translation
 
   * [ ] Server settings
     * [x] Sketch out a type
