@@ -31,7 +31,7 @@ impl From<TranslationSettings> for TranslationClient {
     }
 }
 
-enum Language {
+pub(crate) enum Language {
     Yoda,
     Shakespear,
 }
@@ -46,7 +46,7 @@ impl std::fmt::Display for Language {
 }
 
 #[derive(Error, Debug)]
-enum Error {
+pub(crate) enum Error {
     #[error("Hit the hourly rate limit when trying to translate")]
     RateLimitHit,
     #[error("Tried to deserialize invalid translation")]
@@ -76,27 +76,29 @@ impl TranslationClient {
         TranslationClient { client, domain }
     }
 
-    async fn translate<S: Into<String>>(
+    pub(crate) async fn translate<S: AsRef<str>>(
         &self,
         text: S,
         language: Language,
-    ) -> Result<ExtendedTranslation, Error> {
+    ) -> Result<String, Error> {
         #[derive(Serialize)]
-        struct Text {
-            text: String,
+        struct Text<'a> {
+            text: &'a str,
         }
 
         let translation = self
             .client
             .post(format!("{}/translate/{}", self.domain, language))
-            .json(&Text { text: text.into() })
+            .json(&Text {
+                text: text.as_ref(),
+            })
             .send()
             .await?
             .error_for_status()?
             .json::<ExtendedTranslation>()
             .await?;
 
-        Ok(translation)
+        Ok(translation.contents.translated)
     }
 }
 
@@ -168,10 +170,7 @@ mod tests {
             .await
             .expect("Unable to get translation");
 
-        assert_eq!(
-            yoda_translation.contents.translated,
-            "Fantastic,  this is".to_string()
-        );
+        assert_eq!(yoda_translation, "Fantastic,  this is".to_string());
     }
 
     #[tokio::test]
@@ -194,7 +193,7 @@ mod tests {
             .expect("Unable to get translation");
 
         assert_eq!(
-            shakespeare_translation.contents.translated,
+            shakespeare_translation,
             "Thee did giveth mr. Tim a hearty meal, but unfortunately what did doth englut did maketh him kicketh the bucket.".to_string()
         );
     }
