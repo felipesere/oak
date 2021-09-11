@@ -38,11 +38,14 @@ async fn find_translated_pokemon(
 ) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
         Ok(mut pokemon) => {
-            let translated = translation_api
+            let possible_translation = translation_api
                 .translate(&pokemon.description, Language::Yoda)
-                .await
-                .expect("Error when translating");
-            pokemon.description = translated;
+                .await;
+
+            if let Ok(translated) = possible_translation {
+                pokemon.description = translated;
+            }
+
             ok(pokemon)
         }
         Err(_) => not_found(format!("Unable to find '{}'", name)),
@@ -277,6 +280,49 @@ mod test {
                 {
                     "name": "diglett",
                     "description": "On plant roots,  lives about one yard underground where it feeds.Above ground,  it sometimes appears.",
+                    "habitat":"cave",
+                    "isLegendary":false
+                }
+                "#
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn when_the_translation_fails_we_fall_back_to_the_standard_description() {
+        let (settings, mock_poke_api, mock_translation_api) = setup().await;
+
+        // diglett is the best cave Pokemon
+        Mock::given(method("GET"))
+            .and(path("/api/v2/pokemon-species/diglett"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_DIGLETT, "application/json"))
+            .expect(1)
+            .mount(&mock_poke_api)
+            .await;
+
+        Mock::given(method("POST"))
+            .and(path("/translate/yoda"))
+            .respond_with(ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_translation_api)
+            .await;
+
+        let client = Client::tracked(rocket(settings)).await.unwrap();
+
+        let response = client.get("/pokemon/translated/diglett").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        let diglett_json = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&diglett_json),
+            json(
+                r#"
+                {
+                    "name": "diglett",
+                    "description": "Lives about one yard underground where it feeds on plant roots. It sometimes appears above ground.",
                     "habitat":"cave",
                     "isLegendary":false
                 }
