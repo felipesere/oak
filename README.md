@@ -32,9 +32,14 @@ as they come up.
       * [x] Use new type in hardcoded response
       * [x] Untranslated response is good to go
    * [ ] Sketch out translation endpoint
-      * [ ] Write an endpoint `GET /pokemon/translated/mewtwo` with a hardcoded response
-      * [ ] Wire in the Translation API client
-      * [ ] Apply rule for Yoda translation
+      * [x] Write an endpoint `GET /pokemon/translated/mewtwo` with a hardcoded response
+      * [x] Wire in the Translation API client
+      * [~] Apply rule for Yoda translation
+          * [x] cave
+          * [ ] legendary
+      * [ ] Use shakespear translation
+
+* [ ] See if I can lift `mocks::` into its own module/crate that can be used from all tests?
 
   * [ ] Server settings
     * [x] Sketch out a type
