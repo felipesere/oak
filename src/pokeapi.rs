@@ -1,4 +1,5 @@
 use reqwest::{Client, StatusCode};
+use serde::de::{IgnoredAny, SeqAccess, Visitor};
 use serde::Deserialize;
 use std::time::Duration;
 use thiserror::Error;
@@ -25,31 +26,61 @@ struct FlavorText {
     language: Language,
 }
 
+fn deserialize_flavour_text<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct FlavourTextVisitor;
+
+    impl<'de> Visitor<'de> for FlavourTextVisitor {
+        type Value = String;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("expected an array")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut found = None;
+            while let Some(flavour_entry) = seq.next_element::<FlavorText>()? {
+                if flavour_entry.language.name == "en" {
+                    found = Some(flavour_entry.flavor_text);
+                    break;
+                }
+            }
+            while let Some(_ignored_any) = seq.next_element::<IgnoredAny>()? {}
+
+            found.ok_or_else(|| {
+                serde::de::Error::custom("did not find an english variant of the flavour text")
+            })
+        }
+    }
+
+    deserializer.deserialize_seq(FlavourTextVisitor)
+}
+
 #[derive(Deserialize, Debug)]
 struct ExternalPokemon {
     name: String,
     is_legendary: bool,
     habitat: Habitat,
-    flavor_text_entries: Vec<FlavorText>,
+    #[serde(rename="flavor_text_entries", deserialize_with = "deserialize_flavour_text")]
+    description: String,
 }
 
 fn clean_text(input: &str) -> String {
     input.replace(&['\n', FORM_FEED][..], " ")
 }
 
-// TODO: Consider try_from to cover the case where there is no flavor text
 impl From<ExternalPokemon> for Pokemon {
     fn from(api_pokemon: ExternalPokemon) -> Self {
-        let description = &api_pokemon
-            .flavor_text_entries
-            .iter()
-            .find(|entry| entry.language.name == "en")
-            .map(|entry| clean_text(&entry.flavor_text))
-            .expect("Pokemon did not have english flavour text");
+        let description = clean_text(&api_pokemon.description);
 
         Pokemon {
             name: api_pokemon.name,
-            description: description.to_string(),
+            description,
             habitat: api_pokemon.habitat.name,
             is_legendary: api_pokemon.is_legendary,
         }
@@ -169,11 +200,7 @@ mod tests {
         assert_eq!(ditto.name, "ditto".to_string());
         assert!(!ditto.is_legendary);
         assert_eq!(ditto.habitat.name, "urban".to_string());
-        assert_eq!(ditto.flavor_text_entries.len(), 134);
-
-        let first_flavour_text = &ditto.flavor_text_entries[0];
-        assert_eq!(first_flavour_text.flavor_text, "It can freely recombine its own cellular structure to\ntransform into other life-forms.".to_string());
-        assert_eq!(first_flavour_text.language.name, "en".to_string());
+        assert_eq!(ditto.description, "It can freely recombine its own cellular structure to\ntransform into other life-forms.".to_string());
     }
 
     #[test]

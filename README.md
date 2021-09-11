@@ -15,7 +15,7 @@ as they come up.
     * [x] Use Wiremock for local testing
 
 * [x] Find the right the flavour text in the right language and construct a smaller Pokemon type
-  * [?] ...or do that with some custom Serde magic
+  * [x] ...or do that with some custom Serde magic
 
 * [ ] Build a client for the translations API
   * [x] Serialize a response from the Translations API
