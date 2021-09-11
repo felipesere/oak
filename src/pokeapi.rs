@@ -6,24 +6,11 @@ use thiserror::Error;
 
 use crate::Pokemon;
 
-const FORM_FEED: char = '\u{000C}';
-
-// TODO: Consider a custom deserializer and custom types
+const FORM_FEED: char = '\u{c}';
 
 #[derive(Deserialize, Debug)]
 struct Habitat {
     name: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Language {
-    name: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct FlavorText {
-    flavor_text: String,
-    language: Language,
 }
 
 fn deserialize_flavour_text<'de, D>(deserializer: D) -> Result<String, D::Error>
@@ -43,6 +30,17 @@ where
         where
             A: SeqAccess<'de>,
         {
+            #[derive(Deserialize)]
+            struct Language {
+                name: String,
+            }
+
+            #[derive(Deserialize)]
+            struct FlavorText {
+                flavor_text: String,
+                language: Language,
+            }
+
             let mut found = None;
             while let Some(flavour_entry) = seq.next_element::<FlavorText>()? {
                 if flavour_entry.language.name == "en" {
@@ -50,6 +48,9 @@ where
                     break;
                 }
             }
+            // Consume any remaining flavour text entries without actually allocating any memory.
+            // Serde requires that we consume the entire available JSON, probably to know where to
+            // continue deserializing other fields?
             while let Some(_ignored_any) = seq.next_element::<IgnoredAny>()? {}
 
             found.ok_or_else(|| {
@@ -66,7 +67,10 @@ struct ExternalPokemon {
     name: String,
     is_legendary: bool,
     habitat: Habitat,
-    #[serde(rename="flavor_text_entries", deserialize_with = "deserialize_flavour_text")]
+    #[serde(
+        rename = "flavor_text_entries",
+        deserialize_with = "deserialize_flavour_text"
+    )]
     description: String,
 }
 
