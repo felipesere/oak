@@ -203,7 +203,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn when_asking_for_a_translation_the_description_of_a_cave_pokemon_is_in_yoda_speak() {
+    async fn when_asking_for_a_cave_pokemon_the_translation_is_in_yoda_speak() {
         let (client, poke_mock, translation_mock) = setup().await;
 
         poke_mock.is_present("diglett", RAW_DIGLETT).await;
@@ -227,6 +227,38 @@ mod test {
                     "description": "On plant roots,  lives about one yard underground where it feeds.Above ground,  it sometimes appears.",
                     "habitat":"cave",
                     "isLegendary":false
+                }
+                "#
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn when_asking_for_a_legendary_pokemon_the_translation_is_in_yoda_speak() {
+        let (client, poke_mock, translation_mock) = setup().await;
+
+        // MewTwo is definitly legendary!
+        poke_mock.is_present("mewtwo", RAW_MEWTWO).await;
+        translation_mock
+            .can_translate(Language::Yoda, MEWTWO_AS_YODA)
+            .await;
+
+        let response = client.get("/pokemon/translated/mewtwo").dispatch().await;
+        assert_eq!(response.status(), Status::Ok);
+        let mewtwo_json = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&mewtwo_json),
+            json(
+                r#"
+                {
+                    "name": "mewtwo",
+                    "description": "Created by a scientist after years of horrific gene splicing and dna engineering experiments,  it was.",
+                    "habitat":"rare",
+                    "isLegendary": true
                 }
                 "#
             )
@@ -277,6 +309,8 @@ mod test {
         pub const RAW_DIGLETT: &'static str = include_str!("../examples/diglett.json");
         pub const DIGLETT_AS_YODA: &'static str =
             include_str!("../examples/translation/diglett_yoda.json");
+        pub const MEWTWO_AS_YODA: &'static str =
+            include_str!("../examples/translation/mewtwo_yoda.json");
 
         pub async fn setup() -> (Client, MockPokeApi, MockTranslationApi) {
             let poke_server = MockServer::start().await;
