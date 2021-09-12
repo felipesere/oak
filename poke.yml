@@ -1,0 +1,7 @@
+poke_api:
+  base_url: https://pokeapi.co
+  timeout:  10s
+
+translation_api:
+  base_url: https://api.funtranslations.com
+  timeout: 10s

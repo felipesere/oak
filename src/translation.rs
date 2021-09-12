@@ -20,9 +20,10 @@ pub(crate) struct TranslationClient {
     domain: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Deserialize)]
 pub(crate) struct TranslationSettings {
     pub(crate) base_url: String,
+    #[serde(with = "humantime_serde")]
     pub(crate) timeout: Duration,
 }
 

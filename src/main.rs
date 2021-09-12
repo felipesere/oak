@@ -1,7 +1,9 @@
+use argh::FromArgs;
 use pokeapi::{PokeApiSettings, PokeClient};
+use server::rocket;
 use translation::{TranslationClient, TranslationSettings};
 
-use server::rocket;
+use serde::Deserialize;
 
 mod pokeapi;
 mod server;
@@ -10,6 +12,15 @@ mod translation;
 #[cfg(test)]
 mod mocks;
 
+#[derive(FromArgs)]
+/// A simple Pokemon server that gives minimal information
+struct Cli {
+    #[argh(option)]
+    /// from where to load additional config
+    config: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct Settings {
     poke_api: PokeApiSettings,
     translation_api: TranslationSettings,
@@ -27,18 +38,10 @@ impl Settings {
 
 #[rocket::main]
 async fn main() {
-    use std::time::Duration;
-
-    let settings = Settings {
-        poke_api: PokeApiSettings {
-            base_url: "https://pokeapi.co".to_string(),
-            timeout: Duration::from_secs(10),
-        },
-        translation_api: TranslationSettings {
-            base_url: "https://api.funtranslations.com".into(),
-            timeout: Duration::from_secs(10),
-        },
-    };
+    let cli: Cli = argh::from_env();
+    let settings_file = std::fs::read_to_string(cli.config).expect("should have read a config");
+    let settings: Settings =
+        serde_yaml::from_str(&settings_file).expect("Should have parsed config");
 
     let _ = rocket(settings).launch().await;
 }

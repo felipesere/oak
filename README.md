@@ -42,11 +42,13 @@ as they come up.
 
 * [x] See if I can lift `mocks::` into its own module/crate that can be used from all tests?
 
-  * [ ] Server settings
-    * [x] Sketch out a type
-    * [ ] Read up on figmet to support multiple types of configurations, but at least ENV vars (e.g. port!) and YAML
-    * [ ] Server settings for port
-  * [ ] Consider elevating the tests to integration tests rather than unit tests
+* [ ] Server settings
+  * [x] Sketch out a type
+  * [/] Read up on figment to support multiple types of configurations, but at least ENV vars (e.g. port!) and l
+  * [/] Server settings for port
+    Had to bail on these as the mechanis is very odd and intrusive
+
+* [ ] Consider elevating the tests to integration tests rather than unit tests
 
 * [ ] Logging & Tracing
     * [x] Add some basic logs to the PokeApi
