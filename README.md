@@ -55,14 +55,3 @@ as they come up.
 
 * [x] Setup CI with Github Actions (is this still free?) or CircleCI
 * [ ] review types and check which ones are `pub`/`pub(crate)` and document accordingly
-
-
-## Thoughts
-
-* Use wiremock to mock the two APIs
-* Use Rocket 0.5 for the server itself
-* Consider Clap to start and run the whole thing
-* Decouple from web framework where possible without sacrificing legibility
-* Serde for JSON
-* Reqwest to talk to the backend APIs
-* Consider constructing pretty errors with Miette
