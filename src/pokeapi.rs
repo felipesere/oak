@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::time::Duration;
 use thiserror::Error;
 
-use crate::Pokemon;
+use crate::server::Pokemon;
 
 const FORM_FEED: char = '\u{c}';
 

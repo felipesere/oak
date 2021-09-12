@@ -25,8 +25,8 @@ as they come up.
   * [x] Handle bad JSON
   * [ ] Add some rudimentary logging
 
-* [ ] Server
-  * [ ] Break server out into its own module
+* [x] Server
+  * [x] Break server out into its own module
   * [x] Sketch out a basic server with a single endpoint that retrieves the Pokemon from the live PokeApi
       * [x] Write an endpoint `GET /pokemon/mewtwo` that responds with a hardcoded, boring string
       * [x] Write a type that serializes to the desiered JSON format
