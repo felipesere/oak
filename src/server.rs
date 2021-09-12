@@ -3,6 +3,7 @@ use crate::translation::{Language, TranslationClient};
 use crate::Settings;
 
 use rocket::http::Status;
+use rocket::Request;
 use rocket::{serde::json::Json, Build, Rocket, State};
 use serde::Serialize;
 
@@ -77,11 +78,37 @@ async fn find_translated_pokemon(
     }
 }
 
+#[derive(Serialize)]
+struct Examples {
+    mewtwo: &'static str,
+    diglett_translated: &'static str,
+}
+
+#[derive(Serialize)]
+struct HelpMessage {
+    message: String,
+    help: &'static str,
+    examples: Examples,
+}
+
+#[rocket::catch(404)]
+fn help_message(req: &Request) -> Json<HelpMessage> {
+    Json(HelpMessage {
+        message: format!("Route '{}' was not found", req.uri().path()),
+        help: "There are only two valid routes: '/pokemon/<name>' and '/pokemon/translated/<name>'",
+        examples: Examples {
+            mewtwo: "/pokemon/mewtwo",
+            diglett_translated: "/pokemon/translated/diglett",
+        },
+    })
+}
+
 pub(crate) fn rocket(settings: Settings) -> Rocket<Build> {
     let poke_api_client = settings.poke_api_client();
     let translation_client = settings.translation_api_client();
 
     rocket::build()
+        .register("/", rocket::catchers![help_message])
         .manage(poke_api_client)
         .manage(translation_client)
         .mount("/", rocket::routes![find_pokemon, find_translated_pokemon])
@@ -116,6 +143,34 @@ mod test {
                     "description": "It was created by scientists after years...",
                     "habitat":"rare",
                     "isLegendary":true
+                }
+                "#
+            )
+        );
+    }
+    #[tokio::test]
+    async fn requesting_non_existing_routes_gives_a_helpful_message_with_examples() {
+        let (client, _, _) = setup().await;
+
+        let response = client.get("/a/random/route").dispatch().await;
+
+        assert_eq!(response.status(), Status::NotFound);
+        let error = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&error),
+            json(
+                r#"
+                {
+                    "message": "Route '/a/random/route' was not found",
+                    "help": "There are only two valid routes: '/pokemon/<name>' and '/pokemon/translated/<name>'",
+                    "examples": {
+                        "mewtwo": "/pokemon/mewtwo",
+                        "diglett_translated": "/pokemon/translated/diglett"
+                    }
                 }
                 "#
             )

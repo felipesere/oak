@@ -130,7 +130,6 @@ impl PokeClient {
         PokeClient { client, domain }
     }
 
-    #[allow(dead_code)]
     pub(crate) async fn find(&self, name: &str) -> Result<Pokemon, Error> {
         log::info!("Getting information about {}", name);
 
@@ -216,7 +215,7 @@ mod tests {
 
     #[test]
     fn cleanup_any_line_and_form_feed_characters_from_flavour_text() {
-        // Rust can't represent \f in a literal, see examples/mewtwo.json
+        // Rust can't represent \f in a literal (see examples/mewtwo.json) so we use \u{000C}
         // for more examples of the form feed
         let flavor_text = "Its DNA is almost\nthe same as MEW's.\nHowever, its size\u{000C}and disposition\nare vastly dif­\nferent.";
 
