@@ -1,4 +1,4 @@
-use crate::pokeapi::PokeClient;
+use crate::pokeapi::{Error, PokeClient};
 use crate::translation::{Language, TranslationClient};
 use crate::Settings;
 
@@ -32,12 +32,21 @@ fn not_found<T>(message: String) -> ApiResult<T> {
     Result::Err((Status::NotFound, Json(ApiError { message })))
 }
 
+fn internal_server_error<T>() -> ApiResult<T> {
+    Result::Err((
+        Status::InternalServerError,
+        Json(ApiError {
+            message: "Internal server error".into(),
+        }),
+    ))
+}
+
 #[rocket::get("/pokemon/<name>")]
 async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
         Ok(pokemon) => ok(pokemon),
-        // TODO: Surface more accurate errors
-        Err(_) => not_found(format!("Unable to find '{}'", name)),
+        Err(Error::NoSuchPokemon { pokemon }) => not_found(format!("Unable to find '{}'", pokemon)),
+        Err(_) => internal_server_error(),
     }
 }
 
@@ -63,8 +72,8 @@ async fn find_translated_pokemon(
 
             ok(pokemon)
         }
-        // TODO: Surface more accurate errors
-        Err(_) => not_found(format!("Unable to find '{}'", name)),
+        Err(Error::NoSuchPokemon { pokemon }) => not_found(format!("Unable to find '{}'", pokemon)),
+        Err(_) => internal_server_error(),
     }
 }
 
@@ -113,15 +122,6 @@ mod test {
         );
     }
 
-    fn json(input: &str) -> serde_json::Value {
-        match serde_json::from_str::<serde_json::Value>(input) {
-            Ok(value) => value,
-            Err(err) => {
-                panic!("Did not get valid JSON: {}. Context\n{}", err, input)
-            }
-        }
-    }
-
     #[tokio::test]
     async fn requesting_mewtwo_makes_a_call_to_the_pokemon_api() {
         let (client, poke_mock, _) = setup().await;
@@ -152,7 +152,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn api_errors_contain_a_indicateive_message() {
+    async fn lets_users_know_when_pokemon_were_not_found() {
         let (client, poke_mock, _) = setup().await;
 
         poke_mock.no_pokemon_exist().await;
@@ -173,6 +173,26 @@ mod test {
                 }
                 "#
             )
+        );
+    }
+
+    #[tokio::test]
+    async fn other_errors_result_in_a_500_error() {
+        let (client, poke_mock, _) = setup().await;
+
+        poke_mock.is_present("mewtwo", "{not_even_json}").await;
+
+        let response = client.get("/pokemon/mewtwo").dispatch().await;
+        assert_eq!(response.status(), Status::InternalServerError);
+
+        let error = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&error),
+            json(r#"{"message": "Internal server error"}"#)
         );
     }
 
@@ -272,7 +292,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn when_the_translation_fails_we_fall_back_to_the_standard_description() {
+    async fn when_the_translation_fails_it_falls_back_to_the_standard_description() {
         let (client, poke_mock, translation_mock) = setup().await;
 
         poke_mock.is_present("diglett", RAW_DIGLETT).await;
@@ -298,5 +318,62 @@ mod test {
                 "#
             )
         );
+    }
+
+    #[tokio::test]
+    async fn when_translated_pokemon_does_not_exist_a_404_is_returned() {
+        let (client, poke_mock, _) = setup().await;
+
+        poke_mock.no_pokemon_exist().await;
+
+        let response = client.get("/pokemon/translated/diglett").dispatch().await;
+        assert_eq!(response.status(), Status::NotFound);
+
+        let error = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&error),
+            json(
+                r#"
+                {
+                    "message": "Unable to find 'diglett'"
+                }
+                "#
+            )
+        );
+    }
+
+    #[tokio::test]
+    async fn when_requesting_a_translated_pokemon_fails() {
+        let (client, poke_mock, _) = setup().await;
+
+        poke_mock
+            .is_present("diglett", r#"{not_really_even_json}"#)
+            .await;
+
+        let response = client.get("/pokemon/translated/diglett").dispatch().await;
+        assert_eq!(response.status(), Status::InternalServerError);
+
+        let error = response
+            .into_string()
+            .await
+            .expect("Unexpected empty response");
+
+        assert_json_eq!(
+            json(&error),
+            json(r#"{"message": "Internal server error"}"#)
+        );
+    }
+
+    fn json(input: &str) -> serde_json::Value {
+        match serde_json::from_str::<serde_json::Value>(input) {
+            Ok(value) => value,
+            Err(err) => {
+                panic!("Did not get valid JSON: {}. Context\n{}", err, input)
+            }
+        }
     }
 }
