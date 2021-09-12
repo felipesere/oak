@@ -173,8 +173,7 @@ impl PokeClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assert_matches::assert_matches;
-    use claim::assert_err;
+    use claim::{assert_err, assert_matches};
     use pretty_assertions::assert_eq;
     use std::time::Duration;
     use wiremock::{
