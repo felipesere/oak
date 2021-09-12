@@ -15,6 +15,7 @@ thiserror = "1.0.29"
 tokio = { version = "1", features = [ "rt", "macros" ] }
 
 [dev-dependencies]
+claim = "0.5.0"
 assert-json-diff = "2.0.1"
 assert_matches = "1.5.0"
 pretty_assertions = "0.7.2"

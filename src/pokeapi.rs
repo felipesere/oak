@@ -174,6 +174,7 @@ impl PokeClient {
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
+    use claim::assert_err;
     use pretty_assertions::assert_eq;
     use std::time::Duration;
     use wiremock::{
@@ -205,6 +206,31 @@ mod tests {
         assert!(!ditto.is_legendary);
         assert_eq!(ditto.habitat.name, "urban".to_string());
         assert_eq!(ditto.description, "It can freely recombine its own cellular structure to\ntransform into other life-forms.".to_string());
+    }
+
+    #[test]
+    fn fails_if_there_is_no_english_flavour_text() {
+        // Shrunk example with the necessary fields, except the only flavor text is german...
+        let german_ditton = r#"
+{
+  "flavor_text_entries": [
+     {
+      "flavor_text": "Es kann seine Zellstruktur...",
+      "language": {
+        "name": "de"
+      }
+    }
+  ],
+  "habitat": {
+    "name": "urban",
+    "url": "https://pokeapi.co/api/v2/pokemon-habitat/8/"
+  },
+  "is_legendary": false,
+  "name": "ditto"
+}
+            "#;
+        let not_a_ditto = serde_json::from_str::<ExternalPokemon>(german_ditton);
+        assert_err!(not_a_ditto);
     }
 
     #[test]
