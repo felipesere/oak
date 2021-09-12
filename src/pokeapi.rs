@@ -173,32 +173,14 @@ impl PokeClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mocks;
     use claim::{assert_err, assert_matches};
     use pretty_assertions::assert_eq;
     use std::time::Duration;
-    use wiremock::{
-        matchers::{any, method, path},
-        Mock, MockServer, ResponseTemplate,
-    };
-
-    const RAW_DITTO: &'static str = include_str!("../examples/pokeapi/ditto.json");
-    const RAW_MEWTWO: &'static str = include_str!("../examples/pokeapi/mewtwo.json");
-    const CONNECTION_TIMEOUT: Duration = Duration::from_millis(100);
-
-    async fn setup() -> (PokeClient, MockServer) {
-        let poke_server = MockServer::start().await;
-
-        let settings = PokeApiSettings {
-            base_url: format!("http://{}", poke_server.address().to_string()),
-            timeout: CONNECTION_TIMEOUT,
-        };
-
-        (settings.into(), poke_server)
-    }
 
     #[test]
     fn deserializes_ditto() {
-        let ditto = serde_json::from_str::<ExternalPokemon>(RAW_DITTO)
+        let ditto = serde_json::from_str::<ExternalPokemon>(mocks::RAW_DITTO)
             .expect("unable to deserialize ditto");
 
         assert_eq!(ditto.name, "ditto".to_string());
@@ -245,15 +227,15 @@ mod tests {
 
     #[tokio::test]
     async fn retrieves_mewtwo_from_pokeapi() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_poke_api().await;
 
-        Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/mewtwo"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(RAW_MEWTWO, "application/json"))
-            .mount(&mock_server)
-            .await;
+        mock_server.is_present("mewtwo", mocks::RAW_MEWTWO).await;
 
-        let mewtwo = client.find("mewtwo").await.expect("Failed to get ditto");
+        let mewtwo = mock_server
+            .client()
+            .find("mewtwo")
+            .await
+            .expect("Failed to get ditto");
 
         assert_eq!(mewtwo.name, "mewtwo".to_string());
         assert_eq!(mewtwo.habitat, "rare".to_string());
@@ -263,14 +245,12 @@ mod tests {
 
     #[tokio::test]
     async fn error_when_pokemon_isnt_real() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_poke_api().await;
 
-        Mock::given(any())
-            .respond_with(ResponseTemplate::new(404).set_body_string("Not Found"))
-            .mount(&mock_server)
-            .await;
+        mock_server.no_pokemon_exist().await;
 
-        let err = client
+        let err = mock_server
+            .client()
             .find("not-a-pokemon")
             .await
             .expect_err("should have failed to find 'not-a-pokemon'");
@@ -280,19 +260,12 @@ mod tests {
 
     #[tokio::test]
     async fn error_when_retrieving_ditto_takes_too_long() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_poke_api().await;
 
-        Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/ditto"))
-            .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_raw(RAW_DITTO, "application/json")
-                    .set_delay(CONNECTION_TIMEOUT * 2),
-            )
-            .mount(&mock_server)
-            .await;
+        mock_server.is_slow_to_respond("ditto").await;
 
-        let err = client
+        let err = mock_server
+            .client()
             .find("ditto")
             .await
             .expect_err("should have failed with a timeout");
@@ -302,17 +275,12 @@ mod tests {
 
     #[tokio::test]
     async fn response_for_ditto_is_missing_some_values() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_poke_api().await;
 
-        Mock::given(method("GET"))
-            .and(path("/api/v2/pokemon-species/ditto"))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_raw(r#"{"name": "ditto"}"#, "application/json"),
-            )
-            .mount(&mock_server)
-            .await;
+        mock_server.is_present("ditto", r#"{"name": "ditt"}"#).await;
 
-        let err = client
+        let err = mock_server
+            .client()
             .find("ditto")
             .await
             .expect_err("should have failed due to bad json");

@@ -81,9 +81,9 @@ pub(crate) fn rocket(settings: Settings) -> Rocket<Build> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::mocks::*;
     use crate::translation::Language;
     use assert_json_diff::assert_json_eq;
-    use mocks::*;
     use rocket::http::Status;
 
     #[test]
@@ -298,100 +298,5 @@ mod test {
                 "#
             )
         );
-    }
-
-    pub mod mocks {
-        use crate::rocket;
-        use crate::translation::Language;
-        use crate::{pokeapi::PokeApiSettings, translation::TranslationSettings, Settings};
-
-        use rocket::local::asynchronous::Client;
-        use wiremock::{
-            matchers::{any, method, path},
-            Mock, MockServer, ResponseTemplate,
-        };
-
-        pub const RAW_MEWTWO: &'static str = include_str!("../examples/pokeapi/mewtwo.json");
-        pub const RAW_DIGLETT: &'static str = include_str!("../examples/pokeapi/diglett.json");
-        pub const RAW_BULBASAUR: &'static str = include_str!("../examples/pokeapi/bulbasaur.json");
-
-        pub const DIGLETT_AS_YODA: &'static str =
-            include_str!("../examples/translation/diglett_yoda.json");
-        pub const MEWTWO_AS_YODA: &'static str =
-            include_str!("../examples/translation/mewtwo_yoda.json");
-        pub const BULBASAUR_AS_SHAKESPEARE: &'static str =
-            include_str!("../examples/translation/bulbasaur_shakespeare.json");
-
-        pub async fn setup() -> (Client, MockPokeApi, MockTranslationApi) {
-            let poke_server = MockServer::start().await;
-
-            let translation_server = MockServer::start().await;
-
-            let settings = Settings {
-                poke_api: PokeApiSettings {
-                    base_url: format!("http://{}", poke_server.address().to_string()),
-                    timeout: std::time::Duration::from_secs(3),
-                },
-                translation_api: TranslationSettings {
-                    base_url: format!("http://{}", translation_server.address().to_string()),
-                    timeout: std::time::Duration::from_secs(3),
-                },
-            };
-
-            let client = Client::tracked(rocket(settings)).await.unwrap();
-
-            (
-                client,
-                MockPokeApi(poke_server),
-                MockTranslationApi(translation_server),
-            )
-        }
-
-        pub struct MockPokeApi(pub MockServer);
-
-        impl MockPokeApi {
-            pub async fn is_present(&self, pokemon: &'static str, response: &'static str) {
-                let mock = Mock::given(method("GET"))
-                    .and(path(format!("/api/v2/pokemon-species/{}", pokemon)))
-                    .respond_with(
-                        ResponseTemplate::new(200).set_body_raw(response, "application/json"),
-                    )
-                    .expect(1);
-
-                self.0.register(mock).await;
-            }
-
-            pub async fn no_pokemon_exist(&self) {
-                let mock = Mock::given(any())
-                    .respond_with(ResponseTemplate::new(404))
-                    .expect(1);
-
-                self.0.register(mock).await;
-            }
-        }
-
-        pub struct MockTranslationApi(pub MockServer);
-
-        impl MockTranslationApi {
-            pub(crate) async fn can_translate(&self, lang: Language, response: &'static str) {
-                let mock = Mock::given(method("POST"))
-                    .and(path(format!("/translate/{}", lang)))
-                    .respond_with(
-                        ResponseTemplate::new(200).set_body_raw(response, "application/json"),
-                    )
-                    .expect(1);
-
-                self.0.register(mock).await;
-            }
-
-            pub(crate) async fn fails_to_translate(&self, lang: Language) {
-                let mock = Mock::given(method("POST"))
-                    .and(path(format!("/translate/{}", lang)))
-                    .respond_with(ResponseTemplate::new(500))
-                    .expect(1);
-
-                self.0.register(mock).await;
-            }
-        }
     }
 }

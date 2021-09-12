@@ -4,8 +4,11 @@ use translation::{TranslationClient, TranslationSettings};
 use server::rocket;
 
 mod pokeapi;
-mod translation;
 mod server;
+mod translation;
+
+#[cfg(test)]
+mod mocks;
 
 struct Settings {
     poke_api: PokeApiSettings,

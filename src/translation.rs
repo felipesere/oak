@@ -106,12 +106,9 @@ impl TranslationClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mocks;
     use claim::assert_matches;
     use pretty_assertions::assert_eq;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    const CONNECTION_TIMEOUT: Duration = Duration::from_millis(100);
 
     #[test]
     fn deserializes_a_successful_translation() {
@@ -141,32 +138,19 @@ mod tests {
         );
     }
 
-    async fn setup() -> (TranslationClient, MockServer) {
-        let translation_server = MockServer::start().await;
-
-        let settings = TranslationSettings {
-            base_url: format!("http://{}", translation_server.address().to_string()),
-            timeout: CONNECTION_TIMEOUT,
-        };
-
-        (settings.into(), translation_server)
-    }
-
     #[tokio::test]
     async fn translates_a_simple_sentence_to_yoda_speak() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_translation_api().await;
 
-        Mock::given(method("POST"))
-            .and(path("/translate/yoda"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(
+        mock_server
+            .can_translate(
+                Language::Yoda,
                 include_str!("../examples/translation/yoda.json"),
-                "application/json",
-            ))
-            .expect(1)
-            .mount(&mock_server)
+            )
             .await;
 
-        let yoda_translation = client
+        let yoda_translation = mock_server
+            .client()
             .translate("This is fantastic", Language::Yoda)
             .await
             .expect("Unable to get translation");
@@ -176,19 +160,17 @@ mod tests {
 
     #[tokio::test]
     async fn translates_a_weird_sentence_to_shakespeare_english() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_translation_api().await;
 
-        Mock::given(method("POST"))
-            .and(path("/translate/shakespeare"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(
+        mock_server
+            .can_translate(
+                Language::Shakespear,
                 include_str!("../examples/translation/shakespeare.json"),
-                "application/json",
-            ))
-            .expect(1)
-            .mount(&mock_server)
+            )
             .await;
 
-        let shakespeare_translation = client
+        let shakespeare_translation = mock_server
+            .client()
             .translate("Any sentence...", Language::Shakespear)
             .await
             .expect("Unable to get translation");
@@ -201,24 +183,12 @@ mod tests {
 
     #[tokio::test]
     async fn reports_an_error_when_rate_limit_has_been_hit() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_translation_api().await;
 
-        Mock::given(method("POST"))
-            .and(path("/translate/yoda"))
-            .respond_with(ResponseTemplate::new(429).set_body_raw(
-                r#"{
-                    "error": {
-                        "code": 429,
-                        "message": "Too Many Requests: Rate limit of 5 requests per hour exceeded. Please wait for 17 minutes and 41 seconds."
-                    }
-                }"#,
-                "application/json",
-            ))
-            .expect(1)
-            .mount(&mock_server)
-            .await;
+        mock_server.has_hit_rate_limit().await;
 
-        let err = client
+        let err = mock_server
+            .client()
             .translate("This is fantastic", Language::Yoda)
             .await
             .expect_err("Request should have failed due to rate limiting");
@@ -228,16 +198,12 @@ mod tests {
 
     #[tokio::test]
     async fn reports_an_error_for_bad_json() {
-        let (client, mock_server) = setup().await;
+        let mock_server = mocks::setup_translation_api().await;
 
-        Mock::given(method("POST"))
-            .and(path("/translate/yoda"))
-            .respond_with(ResponseTemplate::new(200).set_body_raw("{ }", "application/json"))
-            .expect(1)
-            .mount(&mock_server)
-            .await;
+        mock_server.can_translate(Language::Yoda, "{ }").await;
 
-        let err = client
+        let err = mock_server
+            .client()
             .translate("This is fantastic", Language::Yoda)
             .await
             .expect_err("Request should have failed due to bad JSON");

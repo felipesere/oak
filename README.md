@@ -40,7 +40,7 @@ as they come up.
           * [x] legendary
       * [x] Use shakespear translation
 
-* [ ] See if I can lift `mocks::` into its own module/crate that can be used from all tests?
+* [x] See if I can lift `mocks::` into its own module/crate that can be used from all tests?
 
   * [ ] Server settings
     * [x] Sketch out a type
