@@ -46,7 +46,7 @@ fn internal_server_error<T>() -> ApiResult<T> {
 async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
         Ok(pokemon) => ok(pokemon),
-        Err(Error::NoSuchPokemon { pokemon }) => not_found(format!("Unable to find '{}'", pokemon)),
+        Err(Error::NoSuchPokemon) => not_found(format!("Unable to find '{}'", name)),
         Err(_) => internal_server_error(),
     }
 }
@@ -73,7 +73,7 @@ async fn find_translated_pokemon(
 
             ok(pokemon)
         }
-        Err(Error::NoSuchPokemon { pokemon }) => not_found(format!("Unable to find '{}'", pokemon)),
+        Err(Error::NoSuchPokemon) => not_found(format!("Unable to find '{}'", name)),
         Err(_) => internal_server_error(),
     }
 }

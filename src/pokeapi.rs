@@ -113,8 +113,8 @@ pub(crate) struct PokeClient {
 #[allow(dead_code)]
 #[derive(Error, Debug)]
 pub(crate) enum Error {
-    #[error("Did not find '{}'", .pokemon)]
-    NoSuchPokemon { pokemon: String },
+    #[error("Did not find pokemon")]
+    NoSuchPokemon,
     #[error("Received bad JSON from the server")]
     BadJson,
     #[error("Failed to establish connection")]
@@ -141,9 +141,7 @@ impl PokeClient {
             .map_err(|e| match e.status() {
                 Some(StatusCode::NOT_FOUND) => {
                     log::error!("Did not find {} on the PokeApi", name);
-                    Error::NoSuchPokemon {
-                        pokemon: name.to_string(),
-                    }
+                    Error::NoSuchPokemon
                 }
                 _ => {
                     log::error!(
@@ -254,7 +252,7 @@ mod tests {
             .await
             .expect_err("should have failed to find 'not-a-pokemon'");
 
-        assert_matches!(err, Error::NoSuchPokemon { .. });
+        assert_matches!(err, Error::NoSuchPokemon);
     }
 
     #[tokio::test]
