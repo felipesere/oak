@@ -46,8 +46,14 @@ fn internal_server_error<T>() -> ApiResult<T> {
 async fn find_pokemon(poke_api: &State<PokeClient>, name: &str) -> ApiResult<Pokemon> {
     match poke_api.find(name).await {
         Ok(pokemon) => ok(pokemon),
-        Err(Error::NoSuchPokemon) => not_found(format!("Unable to find '{}'", name)),
-        Err(_) => internal_server_error(),
+        Err(Error::NoSuchPokemon) => {
+            log::info!("Did not find a pokemon called '{}'", name);
+            not_found(format!("Unable to find '{}'", name))
+        }
+        Err(error) => {
+            log::info!("Error when looking for '{}': {}", name, error);
+            internal_server_error()
+        }
     }
 }
 
@@ -64,17 +70,33 @@ async fn find_translated_pokemon(
             } else {
                 Language::Shakespear
             };
+            log::info!("Using the '{}' translation for {}", &lang, pokemon.name);
 
             let possible_translation = translation_api.translate(&pokemon.description, lang).await;
 
-            if let Ok(translated) = possible_translation {
-                pokemon.description = translated;
+            match possible_translation {
+                Ok(translated) => {
+                    log::info!("Successfull translation for {}", pokemon.name);
+                    pokemon.description = translated;
+                }
+                Err(error) => {
+                    log::error!(
+                        "Failed to retrieve translation, falling back to standard text: {}",
+                        error
+                    );
+                }
             }
 
             ok(pokemon)
         }
-        Err(Error::NoSuchPokemon) => not_found(format!("Unable to find '{}'", name)),
-        Err(_) => internal_server_error(),
+        Err(Error::NoSuchPokemon) => {
+            log::info!("Did not find a pokemon called '{}'", name);
+            not_found(format!("Unable to find '{}'", name))
+        }
+        Err(error) => {
+            log::info!("Error when looking for '{}': {}", name, error);
+            internal_server_error()
+        }
     }
 }
 
