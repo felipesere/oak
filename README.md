@@ -17,13 +17,13 @@ as they come up.
 * [x] Find the right the flavour text in the right language and construct a smaller Pokemon type
   * [x] ...or do that with some custom Serde magic
 
-* [ ] Build a client for the translations API
+* [x] Build a client for the translations API
   * [x] Serialize a response from the Translations API
   * [x] use reqwest to fire off any requests
   * [x] Definitly cover the error of rate limiting!
      * [ ] Consider logging the remaining Rate-Limiting response header!
   * [x] Handle bad JSON
-  * [ ] Add some rudimentary logging
+  * [x] Add some rudimentary logging
 
 * [x] Server
   * [x] Break server out into its own module
@@ -35,7 +35,7 @@ as they come up.
    * [x] Sketch out translation endpoint
       * [x] Write an endpoint `GET /pokemon/translated/mewtwo` with a hardcoded response
       * [x] Wire in the Translation API client
-      * [~] Apply rule for Yoda translation
+      * [x] Apply rule for Yoda translation
           * [x] cave
           * [x] legendary
       * [x] Use shakespear translation
