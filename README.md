@@ -2,7 +2,7 @@
 
 # oak
 A fun Pokédex that combines timeless brands Pokémon and StarWars with a classical Shakespearean twist.
-Its a server with a simple API that you let's you grab information about Pokémon.
+It's a server with a simple API that let's you grab information about Pokémon.
 And if you are in a particularly fun mood, you can try the _translated_ endpoint which will
 either use yoda or shakespearean English for the description.
 
@@ -66,19 +66,18 @@ test pokeapi::tests::error_when_retrieving_ditto_takes_too_long ... ok
 test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 ```
 
-When adding your own tests, be mindufl that unlike standard rust tests, most of the tests interacting
-with either the server itself or any of the used APIs will need be an `async` function.
-The way this is achieve is annotating the tests with `#[tokio::test]`.
+Tests interacting with either the server itself or any of the used APIs will need to be in `async` functions.
+This is done by annotating the tests with `#[tokio::test]`, which is differnet from the standard Rust `#[test]` annotation.
 
 There is also a bit of machinery around [mocks](src/mocks.rs) and [fixture data](fixtures).
-The `mocks` module gives you high-level interface to setup [WireMock](https://github.com/LukeMathWalker/wiremock-rs) for the used APIs and gives you matching, configured client.
-The fixture data was captured and stored as reference and to not hand-roll the responses from the Mocks.
-This keeps them faithful, at the potential risk of running stale should the API be updated.
+The `mocks` module gives you a high-level interface to setup [WireMock](https://github.com/LukeMathWalker/wiremock-rs) for the used APIs and a matching, configured client.
+The fixture data was captured as reference for the mocks.
+This keeps the data faithful, while running the risk of it going stale should the live API be updated.
 
 ## Running the application
 
 There are couple of ways to run the application, depending on your goals.
-If you just want to see what it does, jump straight to `Locallay`.
+If you just want to see what it does, jump straight to `Locally`.
 If you intend to run it through Docker because you don't want to install rust on your machine, see `Docker`.
 Finally, if you want to deploy this application into a `Kubernetes` cluster, see that section.
 
@@ -91,9 +90,9 @@ cargo build
 ```
 
 This will give us a `debug` build of the server.
-While faster to compile, the resuling binary might be a bit more bloaty.
+While faster to compile, the resulting binary might be a bit more bigger
 
-Then, we can run the server and point it to the local `[configuration](poke.yml)` to get the necessary
+Then, we can run the server and point it to the local [configuration](poke.yml) to get the necessary
 details for the backend:
 
 ```sh
@@ -134,16 +133,16 @@ If you want to change properties like timeouts, you'll have to remember to rebui
 ## What I'd do differently for a production API
 
 This backend was built in a few days with no outside influcence other than what I could gather from books or the internet.
-While it reflects my past experience and current interests, there are certainly areas that I'd address differnetly
+While it reflects my past experience and current interests, there are certainly areas that I'd address differently
 in a real-life production app.
 
-### Pairing to estbalish a broader, shared context
+### Pairing to establish broader, shared context
 
 If I had been assinged this work for a real-life, production use-case, I would have reached out to either
 team mates or other folks whose opinion on technical matters I value.
 These need not have any particular skills to close any gaps I present, but they would act as a sounding
 board to ground decisions on shared experience. Some of the questions I'd be asking would be _"Have
-we done something like this before? Did we do well that time? Did we oversee something?"_ but 
+we done something like this before? Did we do well that time? Did we oversee something?"_ but
 also more lower level details like "These two item _feel_ different, I'm considering splitting them into
 two files or modules. What do you think? How do you feel about the test name? Does it reflect what we just talked about?".
 
@@ -159,29 +158,30 @@ This problem could be solved at various layers:
 The choice of what to cache depends on where use cases are coming from (e.g. only trying to reduce load on the server, or is the some insight into user access patterns we can leverage?)
 and who ends up being operationally responsible for the API.
 
-The FunTranslations API is probably in more dire needd of caching, as its free API has a very limited 5 requests/hour quota.
+The FunTranslations API is probably in more dire need of caching, as its free API has a very limited 5 requests/hour quota.
 That is so low that we'd probably have to come up a mechanism to actively pre-fetch translations while staying withing the quota.
 On the flip side, we have a very robust fallback for when the quota of translations is hit: we simply don't translate.
 This makes the caching less cricial. That could change if we get negative user feedback due to untranslated requests!
 
 I decided against pursuing any of these caching options to keep the code concise and correct.
 Without knowing how successful our API is, its difficult to justify any complex caching strategies,
-so I would probably advise for a simple cachine either the `server.rs` module or in either of the clietns modules.
+so I would probably advise for a simple cachine either the `server.rs` module or in either of the clients modules.
 
 ### Metrics, logs, and more
 As it stands, the logs are barely textual and there are no metrics or events at all.
 That is OK for demonstrating that the API works in a bounded setting (e.g. developer laptops) or a small MVP environment.
-Once the service goes live, the expectation ofusers increase dramatically and we'll need to monitor more aspects of our application.
+Once the service goes live, the expectation of users increase dramatically and we'll need to monitor more aspects of our application.
 For example:
+
 * Monitor how frequently our endpoints are hit and what is the distribution of parameters (Pokemon). This can inform the above caching story!
 * How fast is our API responding? Which parts of the stack dominate? Do we need to reach out to the PokeAPI to deal with capacity?
-* We should monitor what errors occur accross the stack (i.e. Rusts `Result<T,E>` type) to see which parts are prone for errors and can use fallback strategies
-As it stands, operators have to look our textual log stream and potentially create their own extraction and ingestion into whatever tool they use.
+* We should monitor what errors occur accross the stack (i.e. Rusts `Result<T,E>` type) to see which parts are prone to errors and can use fallback strategies.
+As it stands, operators have to look at our text-based log stream and potentially create their own extraction and ingestion into whatever tool they use.
 We could aid this by producing our logs in a stable, predictable format such a JSON with annotated extra data.
 There should be no need to setup intricate regex patterns to extra some information from our messages.
 That kind of context should be added by us the developers at the point in time that we have it.
 
-This space is still a in flux in the Rust ecosystem, though there is seems to be a convergence on Tokios `tracing` and `subscriber` libraries.
+This space is still in flux in the Rust ecosystem, though there seems to be a convergence on Tokios `tracing` and `tracing-subscriber` libraries.
 If this application were to go live soon, I'd invest time into setting up the necessary code to gain insights as described above.
 
 ### Configuration
