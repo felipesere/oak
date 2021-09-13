@@ -146,7 +146,7 @@ mod tests {
         mock_server
             .can_translate(
                 Language::Yoda,
-                include_str!("../examples/translation/yoda.json"),
+                include_str!("../fixtures/translation/yoda.json"),
             )
             .await;
 
@@ -166,7 +166,7 @@ mod tests {
         mock_server
             .can_translate(
                 Language::Shakespear,
-                include_str!("../examples/translation/shakespeare.json"),
+                include_str!("../fixtures/translation/shakespeare.json"),
             )
             .await;
 

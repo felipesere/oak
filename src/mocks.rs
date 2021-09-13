@@ -13,15 +13,15 @@ use wiremock::{
     Mock, MockServer, ResponseTemplate,
 };
 
-pub const RAW_MEWTWO: &'static str = include_str!("../examples/pokeapi/mewtwo.json");
-pub const RAW_DIGLETT: &'static str = include_str!("../examples/pokeapi/diglett.json");
-pub const RAW_DITTO: &'static str = include_str!("../examples/pokeapi/ditto.json");
-pub const RAW_BULBASAUR: &'static str = include_str!("../examples/pokeapi/bulbasaur.json");
+pub const RAW_MEWTWO: &'static str = include_str!("../fixtures/pokeapi/mewtwo.json");
+pub const RAW_DIGLETT: &'static str = include_str!("../fixtures/pokeapi/diglett.json");
+pub const RAW_DITTO: &'static str = include_str!("../fixtures/pokeapi/ditto.json");
+pub const RAW_BULBASAUR: &'static str = include_str!("../fixtures/pokeapi/bulbasaur.json");
 
-pub const DIGLETT_AS_YODA: &'static str = include_str!("../examples/translation/diglett_yoda.json");
-pub const MEWTWO_AS_YODA: &'static str = include_str!("../examples/translation/mewtwo_yoda.json");
+pub const DIGLETT_AS_YODA: &'static str = include_str!("../fixtures/translation/diglett_yoda.json");
+pub const MEWTWO_AS_YODA: &'static str = include_str!("../fixtures/translation/mewtwo_yoda.json");
 pub const BULBASAUR_AS_SHAKESPEARE: &'static str =
-    include_str!("../examples/translation/bulbasaur_shakespeare.json");
+    include_str!("../fixtures/translation/bulbasaur_shakespeare.json");
 
 const CONNECTION_TIMEOUT: Duration = Duration::from_millis(100);
 
