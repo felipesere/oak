@@ -118,7 +118,19 @@ pub(crate) enum Error {
     #[error("Received bad JSON from the server")]
     BadJson,
     #[error("Failed to establish connection")]
-    Other(#[from] reqwest::Error),
+    Other(reqwest::Error),
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        if let Some(StatusCode::NOT_FOUND) = err.status() {
+            Error::NoSuchPokemon
+        } else if err.is_decode() {
+            Error::BadJson
+        } else {
+            Error::Other(err)
+        }
+    }
 }
 
 impl PokeClient {
@@ -137,32 +149,10 @@ impl PokeClient {
             .get(format!("{}/api/v2/pokemon-species/{}", self.domain, name))
             .send()
             .await?
-            .error_for_status()
-            .map_err(|e| match e.status() {
-                Some(StatusCode::NOT_FOUND) => {
-                    log::error!("Did not find {} on the PokeApi", name);
-                    Error::NoSuchPokemon
-                }
-                _ => {
-                    log::error!(
-                        "Unexpected error when getting respose from PokeApi for {}: {}",
-                        name,
-                        e
-                    );
-                    Error::Other(e)
-                }
-            })?
+            .error_for_status()?
             .json::<ExternalPokemon>()
             .await
-            .map_err(|e| {
-                if e.is_decode() {
-                    log::error!("Received bad JSON for {}: {}", name, e);
-                    Error::BadJson
-                } else {
-                    log::error!("Unexpected deserializing JSON for {}: {}", name, e);
-                    Error::Other(e)
-                }
-            })
+            .map_err(Error::from)
             .map(Pokemon::from)
     }
 }
