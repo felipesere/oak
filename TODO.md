@@ -33,6 +33,7 @@ Its a place to keep track of elements/structures I am considering as they come u
           * [x] cave
           * [x] legendary
       * [x] Use shakespear translation
+   * [ ] Consider if I want a similar layer the public and internal Pokemon type with respect to Serde
 
 * [x] See if I can lift `mocks::` into its own module/crate that can be used from all tests?
 

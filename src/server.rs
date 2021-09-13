@@ -7,8 +7,6 @@ use rocket::Request;
 use rocket::{serde::json::Json, Build, Rocket, State};
 use serde::Serialize;
 
-// TODO: Consider if I want a similar layer between this external facing "API Pokemon"
-// and the internal "Pokemon"
 #[derive(Debug, Serialize)]
 pub struct Pokemon {
     pub name: String,
