@@ -131,14 +131,65 @@ The configuration for the PokeAPI and FunTranslation are placed in `poke.yml` wh
 the Docker image itself.
 If you want to change properties like timeouts, you'll have to remember to rebuild the image.
 
-### Kubernetes
-
 ## What I'd do differently for a production API
 
-* Caching of the PokeApi and translations
+This backend was built in a few days with no outside influcence other than what I could gather from books or the internet.
+While it reflects my past experience and current interests, there are certainly areas that I'd address differnetly
+in a real-life production app.
 
-* Metrics, logs, and spans
+### Pairing to estbalish a broader, shared context
 
-* Configuration
+If I had been assinged this work for a real-life, production use-case, I would have reached out to either
+team mates or other folks whose opinion on technical matters I value.
+These need not have any particular skills to close any gaps I present, but they would act as a sounding
+board to ground decisions on shared experience. Some of the questions I'd be asking would be _"Have
+we done something like this before? Did we do well that time? Did we oversee something?"_ but 
+also more lower level details like "These two item _feel_ different, I'm considering splitting them into
+two files or modules. What do you think? How do you feel about the test name? Does it reflect what we just talked about?".
 
-* Pair
+MEH :arrrow_up:. Needs to be more focused, without loosing "me"
+
+### Caching of the PokeApi and FunTranslations API
+The PokeAPI delivers pretty static data. Thankfully, Pokemons only change when new generations of the games are released.
+As such any two users requesting details about the same Pokemon could be handed the same response.
+This problem could be solved at various layers:
+* The PokeAPI client could have an internal cache it build over time.
+* The server module could alternatively also hold the cache, to keep the client free of any complex interdependencies
+* Finally, the entire API could be fronted by [Varnish](https://github.com/varnishcache/varnish-cache), [Squid](http://www.squid-cache.org/), or [Nginx](https://docs.nginx.com/nginx/admin-guide/content-cache/content-caching/).
+The choice of what to cache depends on where use cases are coming from (e.g. only trying to reduce load on the server, or is the some insight into user access patterns we can leverage?)
+and who ends up being operationally responsible for the API.
+
+The FunTranslations API is probably in more dire needd of caching, as its free API has a very limited 5 requests/hour quota.
+That is so low that we'd probably have to come up a mechanism to actively pre-fetch translations while staying withing the quota.
+On the flip side, we have a very robust fallback for when the quota of translations is hit: we simply don't translate.
+This makes the caching less cricial. That could change if we get negative user feedback due to untranslated requests!
+
+I decided against pursuing any of these caching options to keep the code concise and correct.
+Without knowing how successful our API is, its difficult to justify any complex caching strategies,
+so I would probably advise for a simple cachine either the `server.rs` module or in either of the clietns modules.
+
+### Metrics, logs, and more
+As it stands, the logs are barely textual and there are no metrics or events at all.
+That is OK for demonstrating that the API works in a bounded setting (e.g. developer laptops) or a small MVP environment.
+Once the service goes live, the expectation ofusers increase dramatically and we'll need to monitor more aspects of our application.
+For example:
+* Monitor how frequently our endpoints are hit and what is the distribution of parameters (Pokemon). This can inform the above caching story!
+* How fast is our API responding? Which parts of the stack dominate? Do we need to reach out to the PokeAPI to deal with capacity?
+* We should monitor what errors occur accross the stack (i.e. Rusts `Result<T,E>` type) to see which parts are prone for errors and can use fallback strategies
+As it stands, operators have to look our textual log stream and potentially create their own extraction and ingestion into whatever tool they use.
+We could aid this by producing our logs in a stable, predictable format such a JSON with annotated extra data.
+There should be no need to setup intricate regex patterns to extra some information from our messages.
+That kind of context should be added by us the developers at the point in time that we have it.
+
+This space is still a in flux in the Rust ecosystem, though there is seems to be a convergence on Tokios `tracing` and `subscriber` libraries.
+If this application were to go live soon, I'd invest time into setting up the necessary code to gain insights as described above.
+
+### Configuration
+With above metrics, logs, and monitors, operators can detect when there are issues, but as it stands there is little they can do.
+The configuration is partially baked into the application image itself (`poke.yml`) or controlled by non-obvious, framework-dependent
+environment variables.
+Initially, I'd work closely with infrastructure team to understand how they run their applications and what common patterns they follow.
+Do they build on configuration files per environment? Or a template provided by developers? What format do they use?
+Or do they build on well-known environemnt variables?
+It's hard to tell from the outside what the correct answers are, but I'm sure with a couple video calls we'd be able to fit the `oak` server right in.
+
