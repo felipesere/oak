@@ -110,6 +110,27 @@ You should be greeted by the [Rocket](https://rocket.rs) splash screen.
 
 ### Docker
 
+Running the `oak` server from within Docker is fairly easy, if you have Docker installed.
+Installing Docker varies per operating system. [This gist](https://gist.github.com/rstacruz/297fc799f094f55d062b982f7dac9e41) gives a good overview
+for Mac, Windows, and various Linux distros. Do be mindful that a gist is not official documentation!
+
+Once you have docker installed, all you need to do is build it from the root of the repository:
+```sh
+docker build -t oak:latest .
+```
+
+This will produce an image that you can then run:
+```sh
+docker run -p 8000:8000 -e ROCKET_LOG_LEVEL=normal -ti oak:latest
+```
+
+In the above command, we expose port `8000` which is the default `ROCKET_PORT` and we raise the default logging
+level to `normal` to see more activity with `ROCKET_LOG_LEVEL`.
+
+The configuration for the PokeAPI and FunTranslation are placed in `poke.yml` which is baked into the
+the Docker image itself.
+If you want to change properties like timeouts, you'll have to remember to rebuild the image.
+
 ### Kubernetes
 
 ## What I'd do differently for a production API
