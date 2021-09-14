@@ -200,18 +200,6 @@ This backend was built in a few days with no outside influcence other than what 
 While it reflects my past experience and current interests, there are certainly areas that I'd address differently
 in a real-life production app.
 
-### Pairing to establish broader, shared context
-
-If I had been assinged this work for a real-life, production use-case, I would have reached out to either
-team mates or other folks whose opinion on technical matters I value.
-These need not have any particular skills to close any gaps I present, but they would act as a sounding
-board to ground decisions on shared experience. Some of the questions I'd be asking would be _"Have
-we done something like this before? Did we do well that time? Did we oversee something?"_ but
-also more lower level details like "These two item _feel_ different, I'm considering splitting them into
-two files or modules. What do you think? How do you feel about the test name? Does it reflect what we just talked about?".
-
-MEH :arrrow_up:. Needs to be more focused, without loosing "me"
-
 ### Caching of the PokeApi and FunTranslations API
 The PokeAPI delivers pretty static data. Thankfully, Pokemons only change when new generations of the games are released.
 As such any two users requesting details about the same Pokemon could be handed the same response.
