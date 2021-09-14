@@ -215,38 +215,43 @@ There are possible solutions to address this at various layers:
 
 The choice of what to cache depends on where use cases are coming from and who ends up being operationally responsible for the API.
 
-The FunTranslations API is probably in more dire need of caching, as its free API has a very limited 5 requests/hour quota.
-That is so low that we'd probably have to come up a mechanism to actively pre-fetch translations while staying withing the quota.
+The FunTranslations API is probably in most need of caching, as its free API has a very limited quota of 5 requests/hour.
+That is so low that even with a single user we are very likely to hit the limit.
 On the flip side, we have a very robust fallback for when the quota of translations is hit: we simply don't translate.
 This makes the caching less cricial. That could change if we get negative user feedback due to untranslated requests!
 
 I decided against pursuing any of these caching options to keep the code concise and correct.
-Without knowing how successful our API is, its difficult to justify any complex caching strategies,
-so I would probably advise for a simple cachine either the `server.rs` module or in either of the clients modules.
+Without knowing how successful our API is, its difficult to justify any complex caching strategies.
+If necessary, I would advise for a simple cache either in the `server.rs` module or in any of the client modules.
 
 ### Metrics, logs, and more
 As it stands, the logs are barely textual and there are no metrics or events at all.
 That is OK for demonstrating that the API works in a bounded setting (e.g. developer laptops) or a small MVP environment.
-Once the service goes live, the expectation of users increase dramatically and we'll need to monitor more aspects of our application.
-For example:
+Once the service goes live, the expectations of users increases dramatically and we'll need to monitor more aspects of our application.
+I'd invest time in setting up the necessary code to gain insights such as:
 
 * Monitor how frequently our endpoints are hit and what is the distribution of parameters (Pokemon). This can inform the above caching story!
 * How fast is our API responding? Which parts of the stack dominate? Do we need to reach out to the PokeAPI to deal with capacity?
 * We should monitor what errors occur accross the stack (i.e. Rusts `Result<T,E>` type) to see which parts are prone to errors and can use fallback strategies.
+
 As it stands, operators have to look at our text-based log stream and potentially create their own extraction and ingestion into whatever tool they use.
-We could aid this by producing our logs in a stable, predictable format such a JSON with annotated extra data.
-There should be no need to setup intricate regex patterns to extra some information from our messages.
-That kind of context should be added by us the developers at the point in time that we have it.
+We could aid this by producing our logs in a stable, predictable format such as JSON with annotated extra data.
+There should be no need to setup intricate regex patterns to extract some information from our messages.
+That kind of additional information should be added by the developers directly in the code.
 
 This space is still in flux in the Rust ecosystem, though there seems to be a convergence on Tokios `tracing` and `tracing-subscriber` libraries.
-If this application were to go live soon, I'd invest time into setting up the necessary code to gain insights as described above.
 
 ### Configuration
-With above metrics, logs, and monitors, operators can detect when there are issues, but as it stands there is little they can do.
-The configuration is partially baked into the application image itself (`poke.yml`) or controlled by non-obvious, framework-dependent
-environment variables.
-Initially, I'd work closely with infrastructure team to understand how they run their applications and what common patterns they follow.
-Do they build on configuration files per environment? Or a template provided by developers? What format do they use?
-Or do they build on well-known environemnt variables?
+Once observability is in place, operators can detect when there are issues, but as it stands there is little they can do.
+Currently the configuration is partially baked into the application Docker image itself (`poke.yml`) or controlled by non-obvious, framework-dependent
+environment variables such as `ROCKET_PORT=8000`.
+
+In order to setup the configuration, I'd work closely with infrastructure with team to understand how they run other applications and what common patterns they follow:
+
+* Do they build on configuration files per environment or is a template provided by the developers?
+* What format do they use?
+* Do they build a pattern well-known environemnt variables?
+* Is there a service that handles configuration at runtime?
+
 It's hard to tell from the outside what the correct answers are, but I'm sure with a couple video calls we'd be able to fit the `oak` server right in.
 
