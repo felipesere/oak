@@ -72,14 +72,13 @@ This is done by annotating the tests with `#[tokio::test]`, which is differnet f
 There is also a bit of machinery around [mocks](src/mocks.rs) and [fixture data](fixtures).
 The `mocks` module gives you a high-level interface to setup [WireMock](https://github.com/LukeMathWalker/wiremock-rs) for the used APIs and a matching, configured client.
 The fixture data was captured as reference for the mocks.
-This keeps the data faithful, while running the risk of it going stale should the live API be updated.
+This keeps the data faithful, but runs the risk of it going stale should the real API be updated.
 
 ## Running the application
 
 There are couple of ways to run the application, depending on your goals.
-If you just want to see what it does, jump straight to `Locally`.
-If you intend to run it through Docker because you don't want to install rust on your machine, see `Docker`.
-Finally, if you want to deploy this application into a `Kubernetes` cluster, see that section.
+If you just want to see what it does, jump straight to [Locally](#locally).
+If you intend to run it through Docker because you don't want to install rust on your machine, see [Docker](#docker).
 
 ### Locally
 
