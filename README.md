@@ -131,7 +131,8 @@ If you want to change properties like timeouts, you'll have to remember to rebui
 
 ## Using the API
 
-Once the API is up and running (either locally or in Docker) you can interact with it using an HTTP client. In these examples, we'll be using [httpie](https://httpie.io/) because the way its used on the command line resembles what one would expect from the HTTP protocol.
+Once the API is up and running (either locally or in Docker) you can interact with it using an HTTP client.
+In these examples, we'll be using [httpie](https://httpie.io/) because the way its used on the command line resembles what one would expect from the HTTP protocol.
 
 First, we are going to connect to a random route to see how the server responds:
 
@@ -151,7 +152,10 @@ content-type: application/json
 }
 ```
 
-We see the expected 404 Not Found status code, but there is some JSON in the response! The `message` field states that `/not/a/route` not valid and the `help` field tells us which routes the server supports. Finally, there are two examples there that we can use for existing endpoints. Let's run them:
+We see the expected 404 Not Found status code, but there is some JSON in the response!
+The `message` field states that `/not/a/route` not valid and the `help` field tells us which routes the server supports.
+Finally, the repsonse shows two example routes under the `examples` field, one for Mewtwo and one for Diglett.
+Let's run them:
 
 ```sh
 http localhost:8000/pokemon/mewtwo
@@ -183,6 +187,8 @@ content-type: application/json
 }
 ```
 
+> Notice: The FunTranslation API has a very narrow usage quota of 5 requests per hour! See [Caching of the PokeAPI and FunTranslation API](#caching-of-the-pokeapi-and-funtranslations-apiA)
+
 That shows the two interesting endpoints on the API.
 
 If you are keen try more examples, the `/pokemon/translated/<name>` endpoint reacts slightly differently for cave or legendary Pokemon. Instead of guessing which Pokemon fall into that category (_I guessed wrong a couple of times! `Geodude` lives in mountains, not caves!_) you can use the two scripts in `bin/`:
@@ -202,12 +208,12 @@ in a real-life production app.
 ### Caching of the PokeApi and FunTranslations API
 The PokeAPI delivers pretty static data. Thankfully, Pokemons only change when new generations of the games are released.
 As such any two users requesting details about the same Pokemon could be handed the same response.
-This problem could be solved at various layers:
-* The PokeAPI client could have an internal cache it build over time.
+There are possible solutions to address this at various layers:
+* The PokeAPI client could have an internal cache that it builds up over time.
 * The server module could alternatively also hold the cache, to keep the client free of any complex interdependencies
-* Finally, the entire API could be fronted by [Varnish](https://github.com/varnishcache/varnish-cache), [Squid](http://www.squid-cache.org/), or [Nginx](https://docs.nginx.com/nginx/admin-guide/content-cache/content-caching/).
-The choice of what to cache depends on where use cases are coming from (e.g. only trying to reduce load on the server, or is the some insight into user access patterns we can leverage?)
-and who ends up being operationally responsible for the API.
+* The entire API can be put behind an HTTP-cache such as [Varnish](https://github.com/varnishcache/varnish-cache), [Squid](http://www.squid-cache.org/), or [Nginx](https://docs.nginx.com/nginx/admin-guide/content-cache/content-caching/).
+
+The choice of what to cache depends on where use cases are coming from and who ends up being operationally responsible for the API.
 
 The FunTranslations API is probably in more dire need of caching, as its free API has a very limited 5 requests/hour quota.
 That is so low that we'd probably have to come up a mechanism to actively pre-fetch translations while staying withing the quota.
