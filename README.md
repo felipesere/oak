@@ -255,3 +255,18 @@ In order to setup the configuration, I'd work closely with infrastructure with t
 
 It's hard to tell from the outside what the correct answers are, but I'm sure with a couple video calls we'd be able to fit the `oak` server right in.
 
+### API Versioning
+
+At the moment there is only a single version of the API: latest. This is perfectly acceptable for a proof-of-concept. Before the API goes live though, I'd apply a version scheme. This allows the API to evolve over time to cover new use-cases, deprecated underused features, and react to security issues.
+
+ There are various options we could consider:
+
+* Versioned hosts, such as `v1.oak.io`
+* Versioned paths, such as `oak.io/api/v1/...`
+* Versioned content types for resources, such as `Content-Type: application/vnd+pokemon-v1+json`
+
+### Security Considerations
+
+Depending on how critical this API is to our business, I'd consider adding restricting access to authenticated applications and users.
+This is definitely unnecessary for a proof-of-concept, but very important for live applications, particularly ones that have high traffic volumes and service-level agreements for clients.
+Even though there is no sensitive data, being able to prevent bad actors from influencing customers -even indirectly, see [noisy neighbours](https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors)- can help in maintain our reputation.
