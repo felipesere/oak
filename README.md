@@ -111,7 +111,7 @@ You should be greeted by the [Rocket](https://rocket.rs) splash screen.
 
 Running the `oak` server from within Docker is fairly easy, if you have Docker installed.
 Installing Docker varies per operating system. [This gist](https://gist.github.com/rstacruz/297fc799f094f55d062b982f7dac9e41) gives a good overview
-for Mac, Windows, and various Linux distros. Do be mindful that a gist is not official documentation!
+for Mac, Windows, and various Linux distros. Remember that a gist is not official documentation!
 
 Once you have docker installed, all you need to do is build it from the root of the repository:
 ```sh
@@ -129,6 +129,70 @@ level to `normal` to see more activity with `ROCKET_LOG_LEVEL`.
 The configuration for the PokeAPI and FunTranslation are placed in `poke.yml` which is baked into the
 the Docker image itself.
 If you want to change properties like timeouts, you'll have to remember to rebuild the image.
+
+## Using the API
+
+Once the API is up and running (either locally or in Docker) you can interact with it using an HTTP client. In these examples, we'll be using [httpie](https://httpie.io/) because the way its used on the command line resembles what one would expect from the HTTP protocol.
+
+First, we are going to connect to a random route to see how the server responds:
+
+```sh
+http localhost:8000/not/a/route
+
+HTTP/1.1 404 Not Found
+content-type: application/json
+
+{
+    "message": "Route '/not/a/route' was not found",
+    "help": "There are only two valid routes: '/pokemon/<name>' and '/pokemon/translated/<name>'",
+    "examples": {
+        "diglett_translated": "/pokemon/translated/diglett",
+        "mewtwo": "/pokemon/mewtwo"
+    }
+}
+```
+
+We see the expected 404 Not Found status code, but there is some JSON in the response! The `message` field states that `/not/a/route` not valid and the `help` field tells us which routes the server supports. Finally, there are two examples there that we can use for existing endpoints. Let's run them:
+
+```sh
+http localhost:8000/pokemon/mewtwo
+
+HTTP/1.1 200 OK
+content-type: application/json
+
+{
+    "description": "It was created by a scientist after years of horrific gene splicing and DNA engineering experiments.",
+    "habitat": "rare",
+    "isLegendary": true,
+    "name": "mewtwo"
+}
+```
+
+and
+
+```sh
+http localhost:8000/pokemon/translated/diglett
+
+HTTP/1.1 200 OK
+content-type: application/json
+
+{
+    "description": "On plant roots,  lives about one yard underground where it feeds.Above ground,  it sometimes appears.",
+    "habitat": "cave",
+    "isLegendary": false,
+    "name": "diglett"
+}
+```
+
+That shows the two interesting endpoints on the API.
+
+If you are keen try more examples, the `/pokemon/translated/<name>` endpoint reacts slightly differently for cave or legendary Pokemon. Instead of guessing which Pokemon fall into that category (_I guessed wrong a couple of times! `Geodude` lives in mountains, not caves!_) you can use the two scripts in `bin/`:
+
+* `bin/cave-pokemon.sh` will print all Pokemon that inhabit caves according to PokeAPI
+* `bin/legendaries.sh` will print all Pokemon that PokeAPI considers legendary
+
+You will need to have `httpie` and [jq](https://stedolan.github.io/jq/) installed to run these.
+
 
 ## What I'd do differently for a production API
 
