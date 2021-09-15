@@ -1,6 +1,10 @@
 ![example workflow](https://github.com/felipesere/oak/actions/workflows/actions.yml/badge.svg)
 [![codecov](https://codecov.io/gh/felipesere/oak/branch/main/graph/badge.svg?token=AYPBUOYF5T)](https://codecov.io/gh/felipesere/oak)
 
+<p align="center">
+  <img width="160" height="340" src="/assets/Professor_Oak.png">
+</p>
+
 # oak
 A fun Pokédex that combines timeless brands Pokémon and Star Wars with a classical Shakespearean twist.
 It's a server with a simple API that lets you grab information about Pokémon.
