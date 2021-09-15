@@ -1,4 +1,5 @@
 ![example workflow](https://github.com/felipesere/oak/actions/workflows/actions.yml/badge.svg)
+[![codecov](https://codecov.io/gh/felipesere/oak/branch/main/graph/badge.svg?token=AYPBUOYF5T)](https://codecov.io/gh/felipesere/oak)
 
 # oak
 A fun Pokédex that combines timeless brands Pokémon and Star Wars with a classical Shakespearean twist.
