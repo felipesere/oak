@@ -1,9 +1,9 @@
 ![example workflow](https://github.com/felipesere/oak/actions/workflows/actions.yml/badge.svg)
 
 # oak
-A fun Pokédex that combines timeless brands Pokémon and StarWars with a classical Shakespearean twist.
-It's a server with a simple API that let's you grab information about Pokémon.
-And if you are in a particularly fun mood, you can try the _translated_ endpoint which will
+A fun Pokédex that combines timeless brands Pokémon and Star Wars with a classical Shakespearean twist.
+It's a server with a simple API that lets you grab information about Pokémon.
+And if you are in a particularly fun mood, you can try the _translated_ endpoint, which will
 either use yoda or shakespearean English for the description.
 
 ## Setup
@@ -16,6 +16,7 @@ the path through `rustup` is recommended.
 
 The code was built against stable Rust `1.54.0`, so make sure you are close to that version number (or higher!)
 with:
+
 ```sh
 rustc --version
 rustc 1.54.0 (a178d0322 2021-07-26)
@@ -67,16 +68,16 @@ test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 ```
 
 Tests interacting with either the server itself or any of the used APIs will need to be in `async` functions.
-This is done by annotating the tests with `#[tokio::test]`, which is differnet from the standard Rust `#[test]` annotation.
+This is done by annotating the tests with `#[tokio::test]`, which is different from the standard Rust `#[test]` annotation.
 
 There is also a bit of machinery around [mocks](src/mocks.rs) and [fixture data](fixtures).
-The `mocks` module gives you a high-level interface to setup [WireMock](https://github.com/LukeMathWalker/wiremock-rs) for the used APIs and a matching, configured client.
+The `mocks` module gives you a high-level interface to set up [WireMock](https://github.com/LukeMathWalker/wiremock-rs) for the used APIs and a matching, configured client.
 The fixture data was captured as reference for the mocks.
 This keeps the data faithful, but runs the risk of it going stale should the real API be updated.
 
 ## Running the application
 
-There are couple of ways to run the application, depending on your goals.
+There are a couple of ways to run the application, depending on your goals.
 If you just want to see what it does, jump straight to [Locally](#locally).
 If you intend to run it through Docker because you don't want to install rust on your machine, see [Docker](#docker).
 
@@ -89,7 +90,7 @@ cargo build
 ```
 
 This will give us a `debug` build of the server.
-While faster to compile, the resulting binary might be a bit more bigger
+While faster to compile, the resulting binary might be a bit bigger
 
 Then, we can run the server and point it to the local [configuration](poke.yml) to get the necessary
 details for the backend:
@@ -125,14 +126,14 @@ docker run -p 8000:8000 -e ROCKET_LOG_LEVEL=normal -ti oak:latest
 In the above command, we expose port `8000` which is the default `ROCKET_PORT` and we raise the default logging
 level to `normal` to see more activity with `ROCKET_LOG_LEVEL`.
 
-The configuration for the PokeAPI and FunTranslation are placed in `poke.yml` which is baked into the
+The configuration for the PokeAPI and FunTranslation is placed in `poke.yml`, which is baked into the
 the Docker image itself.
 If you want to change properties like timeouts, you'll have to remember to rebuild the image.
 
 ## Using the API
 
 Once the API is up and running (either locally or in Docker) you can interact with it using an HTTP client.
-In these examples, we'll be using [httpie](https://httpie.io/) because the way its used on the command line resembles what one would expect from the HTTP protocol.
+In these examples, we'll be using [httpie](https://httpie.io/) because the way it's used on the command line resembles what one would expect from the HTTP protocol.
 
 First, we are going to connect to a random route to see how the server responds:
 
@@ -154,7 +155,7 @@ content-type: application/json
 
 We see the expected 404 Not Found status code, but there is some JSON in the response!
 The `message` field states that `/not/a/route` not valid and the `help` field tells us which routes the server supports.
-Finally, the repsonse shows two example routes under the `examples` field, one for Mewtwo and one for Diglett.
+Finally, the response shows two example routes under the `examples` field, one for Mewtwo and one for Diglett.
 Let's run them:
 
 ```sh
@@ -201,8 +202,8 @@ You will need to have `httpie` and [jq](https://stedolan.github.io/jq/) installe
 
 ## What I'd do differently for a production API
 
-This backend was built in a few days with no outside influcence other than what I could gather from books or the internet.
-While it reflects my past experience and current interests, there are certainly areas that I'd address differently
+This backend was built in a few days with no outside influence other than what I could gather from books or the internet.
+While it reflects my experience and current interests, there are certainly areas that I'd address differently
 in a real-life production app.
 
 ### Caching of the PokeApi and FunTranslations API
@@ -218,10 +219,11 @@ The choice of what to cache depends on where use cases are coming from and who e
 The FunTranslations API is probably in most need of caching, as its free API has a very limited quota of 5 requests/hour.
 That is so low that even with a single user we are very likely to hit the limit.
 On the flip side, we have a very robust fallback for when the quota of translations is hit: we simply don't translate.
-This makes the caching less cricial. That could change if we get negative user feedback due to untranslated requests!
+This makes the caching less critical.
+That could change if we get negative user feedback due to untranslated requests!
 
 I decided against pursuing any of these caching options to keep the code concise and correct.
-Without knowing how successful our API is, its difficult to justify any complex caching strategies.
+Without knowing how successful our API is, it's difficult to justify any complex caching strategies.
 If necessary, I would advise for a simple cache either in the `server.rs` module or in any of the client modules.
 
 ### Metrics, logs, and more
@@ -232,32 +234,32 @@ I'd invest time in setting up the necessary code to gain insights such as:
 
 * Monitor how frequently our endpoints are hit and what is the distribution of parameters (Pokemon). This can inform the above caching story!
 * How fast is our API responding? Which parts of the stack dominate? Do we need to reach out to the PokeAPI to deal with capacity?
-* We should monitor what errors occur accross the stack (i.e. Rusts `Result<T,E>` type) to see which parts are prone to errors and can use fallback strategies.
+* We should monitor what errors occur across the stack (i.e. Rusts `Result<T,E>` type) to see which parts are prone to errors and can use fallback strategies.
 
 As it stands, operators have to look at our text-based log stream and potentially create their own extraction and ingestion into whatever tool they use.
 We could aid this by producing our logs in a stable, predictable format such as JSON with annotated extra data.
-There should be no need to setup intricate regex patterns to extract some information from our messages.
+There should be no need to set up intricate regex patterns to extract some information from our messages.
 That kind of additional information should be added by the developers directly in the code.
 
 This space is still in flux in the Rust ecosystem, though there seems to be a convergence on Tokios `tracing` and `tracing-subscriber` libraries.
 
 ### Configuration
 Once observability is in place, operators can detect when there are issues, but as it stands there is little they can do.
-Currently the configuration is partially baked into the application Docker image itself (`poke.yml`) or controlled by non-obvious, framework-dependent
+The current configuration is partially baked into the application Docker image itself (`poke.yml`) or controlled by non-obvious, framework-dependent
 environment variables such as `ROCKET_PORT=8000`.
 
-In order to setup the configuration, I'd work closely with infrastructure with team to understand how they run other applications and what common patterns they follow:
+In order to set up the configuration, I'd work closely with infrastructure with team to understand how they run other applications and what common patterns they follow:
 
-* Do they build on configuration files per environment or is a template provided by the developers?
+* Do they build on configuration files per environment, or is a template provided by the developers?
 * What format do they use?
-* Do they build a pattern well-known environemnt variables?
+* Do they build upon a pattern of well-known environment variables?
 * Is there a service that handles configuration at runtime?
 
 It's hard to tell from the outside what the correct answers are, but I'm sure with a couple video calls we'd be able to fit the `oak` server right in.
 
 ### API Versioning
 
-At the moment there is only a single version of the API: latest. This is perfectly acceptable for a proof-of-concept. Before the API goes live though, I'd apply a version scheme. This allows the API to evolve over time to cover new use-cases, deprecated underused features, and react to security issues.
+At the moment, there is only a single version of the API: latest. This is perfectly acceptable for a proof-of-concept. Before the API goes live I'd apply a version scheme. This allows the API to evolve over time to cover new use-cases, deprecate underused features, and react to security issues.
 
  There are various options we could consider:
 
@@ -269,4 +271,4 @@ At the moment there is only a single version of the API: latest. This is perfect
 
 Depending on how critical this API is to our business, I'd consider adding restricting access to authenticated applications and users.
 This is definitely unnecessary for a proof-of-concept, but very important for live applications, particularly ones that have high traffic volumes and service-level agreements for clients.
-Even though there is no sensitive data, being able to prevent bad actors from influencing customers -even indirectly, see [noisy neighbours](https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors)- can help in maintain our reputation.
+Even though there is no sensitive data, being able to prevent bad actors from influencing customers -even indirectly, see [noisy neighbours](https://en.wikipedia.org/wiki/Cloud_computing_issues#Performance_interference_and_noisy_neighbors)- can help maintain our reputation.
