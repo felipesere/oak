@@ -110,7 +110,6 @@ pub(crate) struct PokeClient {
     domain: String,
 }
 
-#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub(crate) enum Error {
     #[error("Did not find pokemon")]
