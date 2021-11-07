@@ -1,4 +1,4 @@
-FROM rust:1.55.0-slim as builder
+FROM rust:1.56.1-slim as builder
 
 WORKDIR /app
 COPY Cargo* ./

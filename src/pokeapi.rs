@@ -94,7 +94,6 @@ impl From<ExternalPokemon> for Pokemon {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub(crate) struct PokeApiSettings {
     pub(crate) base_url: String,
-    #[serde(with = "humantime_serde")]
     pub(crate) timeout: Duration,
 }
 
@@ -162,7 +161,6 @@ mod tests {
     use crate::mocks;
     use claim::{assert_err, assert_matches};
     use pretty_assertions::assert_eq;
-    use std::time::Duration;
 
     #[test]
     fn deserializes_ditto() {
@@ -272,24 +270,5 @@ mod tests {
             .expect_err("should have failed due to bad json");
 
         assert_matches!(err, Error::BadJson { .. })
-    }
-
-    #[test]
-    fn reads_configuration() {
-        let pokeapi_yaml = r#"
-            base_url: http://somewhere.com:123
-            timeout: 15s
-        "#;
-
-        let pokeapi_settings = serde_yaml::from_str::<PokeApiSettings>(pokeapi_yaml)
-            .expect("should have parsed PokeApi config YAML");
-
-        assert_eq!(
-            pokeapi_settings,
-            PokeApiSettings {
-                base_url: "http://somewhere.com:123".into(),
-                timeout: Duration::from_secs(15),
-            }
-        );
     }
 }

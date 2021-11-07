@@ -1,7 +1,9 @@
-use argh::FromArgs;
+use std::time::Duration;
+
 use pokeapi::{PokeApiSettings, PokeClient};
 use server::rocket;
 use translation::{TranslationClient, TranslationSettings};
+use humantime;
 
 use serde::Deserialize;
 
@@ -12,14 +14,6 @@ mod translation;
 #[cfg(test)]
 mod mocks;
 
-#[derive(FromArgs)]
-/// A simple Pokemon server that gives minimal information
-struct Cli {
-    #[argh(option)]
-    /// from where to load additional config
-    config: String,
-}
-
 #[derive(Debug, Deserialize)]
 struct Settings {
     poke_api: PokeApiSettings,
@@ -27,6 +21,19 @@ struct Settings {
 }
 
 impl Settings {
+    fn from_env() -> Self {
+        let poke_api_base_url = env_var("APP_POKE_API_BASE_URL");
+        let poke_api_timeout = env_var("APP_POKE_API_TIMEOUT");
+
+        let translation_api_base_url = env_var("APP_TRANSLATION_API_BASE_URL");
+        let translation_api_timeout = env_var("APP_TRANSLATION_API_TIMEOUT");
+
+        Settings {
+            poke_api: PokeApiSettings { base_url: poke_api_base_url, timeout: parse(poke_api_timeout).unwrap() },
+            translation_api: TranslationSettings { base_url: translation_api_base_url, timeout:  parse(translation_api_timeout).unwrap() },
+        }
+    }
+
     fn poke_api_client(&self) -> PokeClient {
         self.poke_api.clone().into()
     }
@@ -36,12 +43,18 @@ impl Settings {
     }
 }
 
+fn parse(input: String) -> Result<Duration, String> {
+    input.parse::<humantime::Duration>()
+        .map(Into::into)
+        .map_err(|e| format!("{}", e))
+}
+
+fn env_var(name: &'static str) -> String {
+    std::env::var(name).expect(&format!("{} not present", name))
+}
+
 #[rocket::main]
 async fn main() {
-    let cli: Cli = argh::from_env();
-    let settings_file = std::fs::read_to_string(cli.config).expect("should have read a config");
-    let settings: Settings =
-        serde_yaml::from_str(&settings_file).expect("Should have parsed config");
-
+    let settings = Settings::from_env();
     let _ = rocket(settings).launch().await;
 }
