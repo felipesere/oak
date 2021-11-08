@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use humantime;
 use pokeapi::{PokeApiSettings, PokeClient};
 use server::rocket;
 use translation::{TranslationClient, TranslationSettings};
@@ -57,7 +56,7 @@ fn parse(input: String) -> Result<Duration, String> {
 }
 
 fn env_var(name: &'static str) -> String {
-    std::env::var(name).expect(&format!("{} not present", name))
+    std::env::var(name).unwrap_or_else(|_| panic!("{} not present", name))
 }
 
 #[rocket::main]
