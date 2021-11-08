@@ -1,9 +1,9 @@
 use std::time::Duration;
 
+use humantime;
 use pokeapi::{PokeApiSettings, PokeClient};
 use server::rocket;
 use translation::{TranslationClient, TranslationSettings};
-use humantime;
 
 use serde::Deserialize;
 
@@ -29,8 +29,14 @@ impl Settings {
         let translation_api_timeout = env_var("APP_TRANSLATION_API_TIMEOUT");
 
         Settings {
-            poke_api: PokeApiSettings { base_url: poke_api_base_url, timeout: parse(poke_api_timeout).unwrap() },
-            translation_api: TranslationSettings { base_url: translation_api_base_url, timeout:  parse(translation_api_timeout).unwrap() },
+            poke_api: PokeApiSettings {
+                base_url: poke_api_base_url,
+                timeout: parse(poke_api_timeout).unwrap(),
+            },
+            translation_api: TranslationSettings {
+                base_url: translation_api_base_url,
+                timeout: parse(translation_api_timeout).unwrap(),
+            },
         }
     }
 
@@ -44,7 +50,8 @@ impl Settings {
 }
 
 fn parse(input: String) -> Result<Duration, String> {
-    input.parse::<humantime::Duration>()
+    input
+        .parse::<humantime::Duration>()
         .map(Into::into)
         .map_err(|e| format!("{}", e))
 }
