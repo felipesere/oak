@@ -16,5 +16,5 @@ humantime = "2.1"
 [dev-dependencies]
 claim = "0.5.0"
 assert-json-diff = "2.0.1"
-pretty_assertions = "0.7.2"
+pretty_assertions = "^1.0"
 wiremock = "0.5"
